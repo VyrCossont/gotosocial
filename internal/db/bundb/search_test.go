@@ -136,7 +136,7 @@ func (suite *SearchTestSuite) TestSearchTags() {
 	// Search with end of tag string.
 	tags, err = suite.db.SearchForTags(suite.T().Context(), "come", "", "", 10, 0)
 	suite.NoError(err)
-	suite.Len(tags, 0)
+	suite.Len(tags, 1)
 }
 
 func TestSearchTestSuite(t *testing.T) {

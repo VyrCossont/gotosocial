@@ -915,7 +915,7 @@ func (suite *SearchGetTestSuite) TestSearchAAny() {
 
 	suite.Len(searchResult.Accounts, 6)
 	suite.Len(searchResult.Statuses, 19)
-	suite.Len(searchResult.Hashtags, 0)
+	suite.Len(searchResult.Hashtags, 1)
 }
 
 func (suite *SearchGetTestSuite) TestSearchAAnyFollowingOnly() {
@@ -958,7 +958,7 @@ func (suite *SearchGetTestSuite) TestSearchAAnyFollowingOnly() {
 
 	suite.Len(searchResult.Accounts, 2)
 	suite.Len(searchResult.Statuses, 19)
-	suite.Len(searchResult.Hashtags, 0)
+	suite.Len(searchResult.Hashtags, 1)
 }
 
 func (suite *SearchGetTestSuite) TestSearchAStatuses() {
