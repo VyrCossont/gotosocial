@@ -467,6 +467,13 @@ func (s *searchDB) SearchForTags(
 		// Select only IDs from table
 		Column("tag.id")
 
+	if minID == "" && maxID == "" {
+		// If not paging, order by tag name length ascending.
+		// This will return closer matches for the query first,
+		// starting with an exact match if there is one.
+		q = q.OrderExpr("LENGTH(tag.name) ASC")
+	}
+
 	// Return only items with a LOWER id than maxID.
 	if maxID == "" {
 		maxID = id.Highest
@@ -485,8 +492,8 @@ func (s *searchDB) SearchForTags(
 	name := strings.TrimSpace(query)
 	name = strings.ToLower(name)
 
-	// Search using LIKE for tags that start with `name`.
-	q = whereStartsLike(q, bun.Ident("tag.name"), name)
+	// Search using LIKE for tags that contain `name`.
+	q = whereLike(q, bun.Ident("tag.name"), name)
 
 	if limit > 0 {
 		// Limit amount of tags returned.
