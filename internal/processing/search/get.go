@@ -665,22 +665,7 @@ func (p *Processor) hashtag(
 	queryType string,
 	appendTag func(*gtsmodel.Tag),
 ) (bool, error) {
-	if query[0] != '#' {
-		// Query doesn't look like a hashtag,
-		// but if we're being instructed to
-		// look explicitly *only* for hashtags,
-		// let's be generous and assume caller
-		// just left out the hash prefix.
-
-		if queryType != queryTypeHashtags {
-			// Nope, search isn't explicitly
-			// for hashtags, keep looking.
-			return true, nil
-		}
-
-		// Search is explicitly for
-		// tags, let this one through.
-	} else if !includeHashtags(queryType) {
+	if query[0] == '#' && !includeHashtags(queryType) {
 		// Query looks like a hashtag,
 		// but we're not meant to include
 		// hashtags in the results.
@@ -692,8 +677,15 @@ func (p *Processor) hashtag(
 		return false, nil
 	}
 
-	// Query looks like a hashtag, and we're allowed
-	// to search for hashtags.
+	// If we're searching for more than just hashtags, keep looking even if hashtag search fails.
+	keepLooking := queryType != queryTypeHashtags
+
+	// But if we're not searching for hashtags, we're done here.
+	if !includeHashtags(queryType) {
+		return keepLooking, nil
+	}
+
+	// We're allowed to search for hashtags.
 	//
 	// Ensure this is a valid tag for our instance.
 	normalized, ok := text.NormalizeHashtag(query)
@@ -701,7 +693,7 @@ func (p *Processor) hashtag(
 		// Couldn't normalize/not a
 		// valid hashtag after all.
 		// Caller should stop looking.
-		return false, nil
+		return keepLooking, nil
 	}
 
 	// Search for tags starting with the normalized string.
@@ -718,7 +710,7 @@ func (p *Processor) hashtag(
 			"error checking database for tags using text %s: %w",
 			normalized, err,
 		)
-		return false, err
+		return keepLooking, err
 	}
 
 	// Return whatever we got.
@@ -726,7 +718,7 @@ func (p *Processor) hashtag(
 		appendTag(tag)
 	}
 
-	return false, nil
+	return keepLooking, nil
 }
 
 // byText searches in the database for accounts and/or
