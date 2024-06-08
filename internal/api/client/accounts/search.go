@@ -18,6 +18,7 @@
 package accounts
 
 import (
+	"math"
 	"net/http"
 
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
@@ -133,7 +134,7 @@ func (m *Module) AccountSearchGETHandler(c *gin.Context) {
 		return
 	}
 
-	offset, errWithCode := apiutil.ParseSearchOffset(c.Query(apiutil.SearchOffsetKey), 0, 10, 0)
+	offset, errWithCode := apiutil.ParseSearchOffset(c.Query(apiutil.SearchOffsetKey), 0, math.MaxInt, 0)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return
