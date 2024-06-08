@@ -18,6 +18,7 @@
 package search
 
 import (
+	"math"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -201,13 +202,13 @@ func (m *Module) SearchGETHandler(c *gin.Context) {
 		return
 	}
 
-	limit, errWithCode := apiutil.ParseLimit(c.Query(apiutil.LimitKey), 20, 40, 1)
+	limit, errWithCode := apiutil.ParseLimit(c.Query(apiutil.LimitKey), 20, 100, 1)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return
 	}
 
-	offset, errWithCode := apiutil.ParseSearchOffset(c.Query(apiutil.SearchOffsetKey), 0, 10, 0)
+	offset, errWithCode := apiutil.ParseSearchOffset(c.Query(apiutil.SearchOffsetKey), 0, math.MaxInt, 0)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return
