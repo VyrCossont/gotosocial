@@ -269,6 +269,7 @@ func (s *searchDB) SearchForStatuses(
 	requestingAccountID string,
 	query string,
 	fromAccountID string,
+	classicScope bool,
 	maxID string,
 	minID string,
 	limit int,
@@ -291,14 +292,16 @@ func (s *searchDB) SearchForStatuses(
 		// Select only IDs from table
 		Column("status.id").
 		// Ignore boosts.
-		Where("? IS NULL", bun.Ident("status.boost_of_id")).
+		Where("? IS NULL", bun.Ident("status.boost_of_id"))
+	if classicScope {
 		// Select only statuses created by
 		// accountID or replying to accountID.
-		WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+		q = q.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
 				Where("? = ?", bun.Ident("status.account_id"), requestingAccountID).
 				WhereOr("? = ?", bun.Ident("status.in_reply_to_account_id"), requestingAccountID)
 		})
+	}
 	if fromAccountID != "" {
 		q = q.Where("? = ?", bun.Ident("status.account_id"), fromAccountID)
 	}
