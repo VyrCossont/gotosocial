@@ -850,6 +850,7 @@ func (p *Processor) statusesByText(
 		requestingAccountID,
 		query,
 		fromAccountID,
+		parsed.classicScope,
 		maxID,
 		minID,
 		limit,
@@ -872,6 +873,8 @@ type parsedQuery struct {
 	query string
 	// fromAccountID is the account from a successfully resolved `from:` operator, if present.
 	fromAccountID string
+	// classicScope enables vanilla GtS search scope restrictions.
+	classicScope bool
 }
 
 // parseQuery parses query text and handles any search operator terms present.
@@ -885,6 +888,8 @@ func (p *Processor) parseQuery(ctx context.Context, query string) (parsed parsed
 			if err != nil {
 				return
 			}
+		} else if queryPart == "scope:classic" || queryPart == "in:library" {
+			parsed.classicScope = true
 		} else {
 			nonOperatorQueryParts = append(nonOperatorQueryParts, queryPart)
 		}

@@ -29,7 +29,7 @@ type Search interface {
 
 	// SearchForStatuses uses the given query text to search for statuses created by requestingAccountID, or in reply to requestingAccountID.
 	// If fromAccountID is used, the results are restricted to statuses created by fromAccountID.
-	SearchForStatuses(ctx context.Context, requestingAccountID string, query string, fromAccountID string, maxID string, minID string, limit int, offset int) ([]*gtsmodel.Status, error)
+	SearchForStatuses(ctx context.Context, requestingAccountID string, query string, fromAccountID string, classicScope bool, maxID string, minID string, limit int, offset int) ([]*gtsmodel.Status, error)
 
 	// SearchForTags searches for tags that start with the given query text (case insensitive).
 	SearchForTags(ctx context.Context, query string, maxID string, minID string, limit int, offset int) ([]*gtsmodel.Tag, error)
