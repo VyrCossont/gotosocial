@@ -107,7 +107,7 @@ func (suite *SearchTestSuite) TestSearchAccountsFossAny() {
 func (suite *SearchTestSuite) TestSearchStatuses() {
 	testAccount := suite.testAccounts["local_account_1"]
 
-	statuses, err := suite.db.SearchForStatuses(context.Background(), testAccount.ID, "hello", "", "", "", 10, 0)
+	statuses, err := suite.db.SearchForStatuses(context.Background(), testAccount.ID, "hello", "", true, "", "", 10, 0)
 	suite.NoError(err)
 	suite.Len(statuses, 1)
 }
@@ -116,7 +116,7 @@ func (suite *SearchTestSuite) TestSearchStatusesFromAccount() {
 	testAccount := suite.testAccounts["local_account_1"]
 	fromAccount := suite.testAccounts["local_account_2"]
 
-	statuses, err := suite.db.SearchForStatuses(context.Background(), testAccount.ID, "hi", fromAccount.ID, "", "", 10, 0)
+	statuses, err := suite.db.SearchForStatuses(context.Background(), testAccount.ID, "hi", fromAccount.ID, true, "", "", 10, 0)
 	suite.NoError(err)
 	if suite.Len(statuses, 1) {
 		suite.Equal(fromAccount.ID, statuses[0].AccountID)
