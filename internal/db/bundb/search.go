@@ -83,6 +83,9 @@ func (s *searchDB) SearchForAccounts(
 	if limit < 0 {
 		limit = 0
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	// Make educated guess for slice size
 	var (
@@ -145,6 +148,19 @@ func (s *searchDB) SearchForAccounts(
 	if limit > 0 {
 		// Limit amount of accounts returned.
 		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		// Apply offset.
+		//
+		// See comment at top of file about performance.
+		// Also note that limit/offset paging is likely to miss or duplicate results
+		// if posts that match the query are rapidly being added.
+		// limit/minID/maxID paging should be preferred.
+		//
+		// Unfortunately, as of 2024-06-08, most Mastodon API clients,
+		// including Phanpy, Semaphore, and the Mastodon web GUI,
+		// can only use limit/offset paging.
+		q = q.Offset(offset)
 	}
 
 	if frontToBack {
@@ -279,6 +295,9 @@ func (s *searchDB) SearchForStatuses(
 	if limit < 0 {
 		limit = 0
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	// Make educated guess for slice size
 	var (
@@ -330,6 +349,19 @@ func (s *searchDB) SearchForStatuses(
 	if limit > 0 {
 		// Limit amount of statuses returned.
 		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		// Apply offset.
+		//
+		// See comment at top of file about performance.
+		// Also note that limit/offset paging is likely to miss or duplicate results
+		// if posts that match the query are rapidly being added.
+		// limit/minID/maxID paging should be preferred.
+		//
+		// Unfortunately, as of 2024-06-08, most Mastodon API clients,
+		// including Phanpy, Semaphore, and the Mastodon web GUI,
+		// can only use limit/offset paging.
+		q = q.Offset(offset)
 	}
 
 	if frontToBack {
@@ -419,6 +451,9 @@ func (s *searchDB) SearchForTags(
 	if limit < 0 {
 		limit = 0
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	// Make educated guess for slice size
 	var (
@@ -456,6 +491,19 @@ func (s *searchDB) SearchForTags(
 	if limit > 0 {
 		// Limit amount of tags returned.
 		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		// Apply offset.
+		//
+		// See comment at top of file about performance.
+		// Also note that limit/offset paging is likely to miss or duplicate results
+		// if posts that match the query are rapidly being added.
+		// limit/minID/maxID paging should be preferred.
+		//
+		// Unfortunately, as of 2024-06-08, most Mastodon API clients,
+		// including Phanpy, Semaphore, and the Mastodon web GUI,
+		// can only use limit/offset paging.
+		q = q.Offset(offset)
 	}
 
 	if frontToBack {
