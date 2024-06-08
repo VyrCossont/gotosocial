@@ -916,7 +916,7 @@ func (suite *SearchGetTestSuite) TestSearchAAny() {
 	}
 
 	suite.Len(searchResult.Accounts, 5)
-	suite.Len(searchResult.Statuses, 8)
+	suite.Len(searchResult.Statuses, 19)
 	suite.Len(searchResult.Hashtags, 0)
 }
 
@@ -959,7 +959,7 @@ func (suite *SearchGetTestSuite) TestSearchAAnyFollowingOnly() {
 	}
 
 	suite.Len(searchResult.Accounts, 2)
-	suite.Len(searchResult.Statuses, 8)
+	suite.Len(searchResult.Statuses, 19)
 	suite.Len(searchResult.Hashtags, 0)
 }
 
@@ -973,7 +973,7 @@ func (suite *SearchGetTestSuite) TestSearchAStatuses() {
 		limit              *int    = nil
 		offset             *int    = nil
 		resolve            *bool   = func() *bool { i := true; return &i }()
-		query                      = "a"
+		query                      = "a scope:classic"
 		queryType          *string = func() *string { i := "statuses"; return &i }() // Only statuses.
 		following          *bool   = nil
 		fromAccountID      *string = nil
@@ -1016,7 +1016,7 @@ func (suite *SearchGetTestSuite) TestSearchHiStatusesWithAccountIDInQueryParam()
 		limit              *int    = nil
 		offset             *int    = nil
 		resolve            *bool   = func() *bool { i := true; return &i }()
-		query                      = "hi"
+		query                      = "hi scope:classic"
 		queryType          *string = func() *string { i := "statuses"; return &i }() // Only statuses.
 		following          *bool   = nil
 		fromAccountID      *string = func() *string { i := suite.testAccounts["local_account_2"].ID; return &i }()
@@ -1059,7 +1059,7 @@ func (suite *SearchGetTestSuite) TestSearchHiStatusesWithAccountIDInQueryText() 
 		limit              *int    = nil
 		offset             *int    = nil
 		resolve            *bool   = func() *bool { i := true; return &i }()
-		query                      = "hi from:1happyturtle"
+		query                      = "hi from:1happyturtle scope:classic"
 		queryType          *string = func() *string { i := "statuses"; return &i }() // Only statuses.
 		following          *bool   = nil
 		fromAccountID      *string = nil
