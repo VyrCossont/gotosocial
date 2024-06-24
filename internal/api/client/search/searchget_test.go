@@ -916,8 +916,8 @@ func (suite *SearchGetTestSuite) TestSearchAAny() {
 	}
 
 	suite.Len(searchResult.Accounts, 5)
-	suite.Len(searchResult.Statuses, 7)
-	suite.Len(searchResult.Hashtags, 0)
+	suite.Len(searchResult.Statuses, 19)
+	suite.Len(searchResult.Hashtags, 1)
 }
 
 func (suite *SearchGetTestSuite) TestSearchAAnyFollowingOnly() {
@@ -959,8 +959,8 @@ func (suite *SearchGetTestSuite) TestSearchAAnyFollowingOnly() {
 	}
 
 	suite.Len(searchResult.Accounts, 2)
-	suite.Len(searchResult.Statuses, 7)
-	suite.Len(searchResult.Hashtags, 0)
+	suite.Len(searchResult.Statuses, 19)
+	suite.Len(searchResult.Hashtags, 1)
 }
 
 func (suite *SearchGetTestSuite) TestSearchAStatuses() {
@@ -1002,7 +1002,7 @@ func (suite *SearchGetTestSuite) TestSearchAStatuses() {
 	}
 
 	suite.Len(searchResult.Accounts, 0)
-	suite.Len(searchResult.Statuses, 7)
+	suite.Len(searchResult.Statuses, 19)
 	suite.Len(searchResult.Hashtags, 0)
 }
 
@@ -1045,7 +1045,7 @@ func (suite *SearchGetTestSuite) TestSearchHiStatusesWithAccountIDInQueryParam()
 	}
 
 	suite.Len(searchResult.Accounts, 0)
-	suite.Len(searchResult.Statuses, 1)
+	suite.Len(searchResult.Statuses, 7)
 	suite.Len(searchResult.Hashtags, 0)
 }
 
@@ -1088,7 +1088,7 @@ func (suite *SearchGetTestSuite) TestSearchHiStatusesWithAccountIDInQueryText() 
 	}
 
 	suite.Len(searchResult.Accounts, 0)
-	suite.Len(searchResult.Statuses, 1)
+	suite.Len(searchResult.Statuses, 7)
 	suite.Len(searchResult.Hashtags, 0)
 }
 
