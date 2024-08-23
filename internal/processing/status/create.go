@@ -27,6 +27,7 @@ import (
 	apimodel "github.com/superseriousbusiness/gotosocial/internal/api/model"
 	"github.com/superseriousbusiness/gotosocial/internal/config"
 	"github.com/superseriousbusiness/gotosocial/internal/db"
+	"github.com/superseriousbusiness/gotosocial/internal/gtscontext"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
 	"github.com/superseriousbusiness/gotosocial/internal/id"
@@ -64,12 +65,35 @@ func (p *Processor) Create(
 	// Get current time.
 	now := time.Now()
 
+	// Default to current time as creation time.
+	createdAt := now
+
+	// Handle backfilled/scheduled statuses.
+	backfill := false
+	if form.ScheduledAt != nil {
+		scheduledAt := *form.ScheduledAt
+
+		// Statuses may only be scheduled a minimum time into the future.
+		if now.Before(scheduledAt) {
+			helpText := "scheduled statuses are not yet supported"
+			return nil, gtserror.NewErrorBadRequest(gtserror.New(helpText), helpText)
+		}
+
+		// If not scheduled into the future, this status is being backfilled.
+		backfill = true
+		createdAt = scheduledAt
+		var err error
+		if statusID, err = p.backfilledStatusID(ctx, createdAt); err != nil {
+			return nil, gtserror.NewErrorInternalError(err)
+		}
+	}
+
 	status := &gtsmodel.Status{
 		ID:                       statusID,
 		URI:                      accountURIs.StatusesURI + "/" + statusID,
 		URL:                      accountURIs.StatusesURL + "/" + statusID,
-		CreatedAt:                now,
-		UpdatedAt:                now,
+		CreatedAt:                createdAt,
+		UpdatedAt:                createdAt,
 		Local:                    util.Ptr(true),
 		Account:                  requester,
 		AccountID:                requester.ID,
@@ -93,7 +117,7 @@ func (p *Processor) Create(
 			Options:    form.Poll.Options,
 			StatusID:   statusID,
 			Status:     status,
-			ExpiresAt:  now.Add(secs * time.Second),
+			ExpiresAt:  createdAt.Add(secs * time.Second),
 		}
 
 		// Set poll ID on the status.
@@ -105,6 +129,7 @@ func (p *Processor) Create(
 		requester,
 		status,
 		form.InReplyToID,
+		backfill,
 	); errWithCode != nil {
 		return nil, errWithCode
 	}
@@ -149,10 +174,14 @@ func (p *Processor) Create(
 	}
 
 	// send it back to the client API worker for async side-effects.
+	var model any = status
+	if backfill {
+		model = &gtsmodel.BackfillStatus{Status: status}
+	}
 	p.state.Workers.Client.Queue.Push(&messages.FromClientAPI{
 		APObjectType:   ap.ObjectNote,
 		APActivityType: ap.ActivityCreate,
-		GTSModel:       status,
+		GTSModel:       model,
 		Origin:         requester,
 	})
 
@@ -167,7 +196,51 @@ func (p *Processor) Create(
 	return p.c.GetAPIStatus(ctx, requester, status)
 }
 
-func (p *Processor) processInReplyTo(ctx context.Context, requester *gtsmodel.Account, status *gtsmodel.Status, inReplyToID string) gtserror.WithCode {
+// backfilledStatusIDRetries should be more than enough attempts.
+const backfilledStatusIDRetries = 100
+
+// backfilledStatusID tries to find an unused ULID for a backfilled status.
+func (p *Processor) backfilledStatusID(ctx context.Context, createdAt time.Time) (string, error) {
+	for try := 0; try < backfilledStatusIDRetries; try++ {
+		var err error
+
+		// Generate a ULID based on the backfilled status's original creation time.
+		statusID := ""
+		if statusID, err = id.NewULIDFromTime(createdAt); err != nil {
+			return "", gtserror.Newf(
+				"failed to generate a time-based ULID for time %v: %w",
+				createdAt,
+				err,
+			)
+		}
+
+		// Check for an existing status with that ID.
+		_, err = p.state.DB.GetStatusByID(gtscontext.SetBarebones(ctx), statusID)
+		if errors.Is(err, db.ErrNoEntries) {
+			// We found an unused one.
+			return statusID, nil
+		} else if err != nil {
+			return "", gtserror.Newf(
+				"DB error checking if a status ID was in use: %w",
+				err,
+			)
+		}
+		// That status ID is in use. Try again.
+	}
+
+	return "", gtserror.Newf(
+		"failed to find an unused ID after %d tries",
+		backfilledStatusIDRetries,
+	)
+}
+
+func (p *Processor) processInReplyTo(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	status *gtsmodel.Status,
+	inReplyToID string,
+	backfill bool,
+) gtserror.WithCode {
 	if inReplyToID == "" {
 		// Not a reply.
 		// Nothing to do.

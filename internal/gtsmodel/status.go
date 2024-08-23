@@ -82,7 +82,7 @@ func (s *Status) GetAccountID() string {
 	return s.AccountID
 }
 
-// GetBoostID implements timeline.Timelineable{}.
+// GetBoostOfID implements timeline.Timelineable{}.
 func (s *Status) GetBoostOfID() string {
 	return s.BoostOfID
 }
@@ -148,7 +148,7 @@ func (s *Status) EmojisPopulated() bool {
 	return true
 }
 
-// EmojissUpToDate returns whether status emoji attachments of receiving status are up-to-date
+// EmojisUpToDate returns whether status emoji attachments of receiving status are up-to-date
 // according to emoji attachments of the passed status, by comparing their emoji URIs. We don't
 // use IDs as this is used to determine whether there are new emojis to fetch.
 func (s *Status) EmojisUpToDate(other *Status) bool {
@@ -255,4 +255,9 @@ const (
 type Content struct {
 	Content    string
 	ContentMap map[string]string
+}
+
+// BackfillStatus is a wrapper for creating a status without pushing notifications to followers.
+type BackfillStatus struct {
+	*Status
 }

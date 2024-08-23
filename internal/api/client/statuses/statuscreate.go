@@ -141,11 +141,15 @@ import (
 //		x-go-name: ScheduledAt
 //		description: |-
 //			ISO 8601 Datetime at which to schedule a status.
-//			Providing this parameter will cause ScheduledStatus to be returned instead of Status.
-//			Must be at least 5 minutes in the future.
 //
+//			Providing this parameter with a *future* time will cause ScheduledStatus to be returned instead of Status.
+//			Must be at least 5 minutes in the future.
 //			This feature isn't implemented yet.
+//
+//			Providing this parameter with a *past* time will cause the status to be backdated,
+//			and will not push it to the user's followers. This is intended for importing old statuses.
 //		type: string
+//		format: date-time
 //		in: formData
 //	-
 //		name: language
