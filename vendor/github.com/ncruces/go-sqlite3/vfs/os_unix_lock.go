@@ -32,9 +32,9 @@ func osGetPendingLock(file *os.File, block bool) _ErrorCode {
 	return osWriteLock(file, _PENDING_BYTE, 1, timeout)
 }
 
-func osGetExclusiveLock(file *os.File, wait bool) _ErrorCode {
+func osGetExclusiveLock(file *os.File, block bool) _ErrorCode {
 	var timeout time.Duration
-	if wait {
+	if block {
 		timeout = time.Millisecond
 	}
 	// Acquire the EXCLUSIVE lock.
@@ -50,6 +50,7 @@ func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
 			// indicates that the other process is not following the locking
 			// protocol. If this happens, return IOERR_RDLOCK. Returning
 			// BUSY would confuse the upper layer.
+			// notest
 			return _IOERR_RDLOCK
 		}
 	}
@@ -98,6 +99,7 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 		case unix.EPERM:
 			return _PERM
 		}
+		// notest // usually EWOULDBLOCK == EAGAIN
 		if errno == unix.EWOULDBLOCK && unix.EWOULDBLOCK != unix.EAGAIN {
 			return _BUSY
 		}

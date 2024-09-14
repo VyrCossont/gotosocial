@@ -76,6 +76,26 @@ Some examples:
 
 ### Visibility and Privacy
 
+#### Visibility Level of Posts to Show on Your Profile
+
+Using this dropdown, you can choose what visibility level(s) of posts should be shown on the public web view of your profile, and served in your RSS feed (if you have enabled RSS).
+
+**By default, GoToSocial shows only Public visibility posts on the web view of your profile, not Unlisted.** You can adjust this setting to also show Unlisted visibility posts on your profile, which is similar to the default for other ActivityPub softwares like Mastodon etc.
+
+You can also choose to show no posts at all on the web view of your profile. This allows you to write posts without having to worry about scrapers, rubberneckers, and other nosy parkers visiting your web profile and looking at your posts.
+
+This setting does not affect visibility of your posts over the ActivityPub protocol, so even if you choose to show no posts on your public web profile, others will be able to see your posts in their client if they follow you, and/or have your posts boosted onto their timeline, use a link to search a post of yours, etc.
+
+!!! warning
+    Be aware that changes to this setting also apply retroactively.
+    
+    That is, if you previously made a post on Unlisted visibility, while set to show only Public posts on your profile, and you change this setting to show Public and Unlisted, then the Unlisted post you previously made will be visible on your profile alongside your Public posts.
+    
+    Likewise, if you change this setting to show no posts, then all your posts will be hidden from your profile, regardless of when you created them, and what this option was set to at the time. This will apply until you change this setting again.
+
+!!! tip
+    Alongside (domain-)blocking, this is a good "emergency" setting to use if you're facing harassment from people trawling through your public posts. It won't hide your posts from people who can see them in their clients, via ActivityPub, but it will at least prevent them from being able to click through your posts in their browser with no authentication, and easily share them with others with a URL.
+
 #### Manually Approve Follow Requests (aka Lock Your Account)
 
 This checkbox allows you to decide whether or not you want to manually review follow requests to your account.
@@ -204,3 +224,43 @@ For more information on the way GoToSocial manages passwords, please see the [Pa
 In the migration section you can manage settings related to aliasing and/or migrating your account to or from another account.
 
 Please see the [migration document](./migration.md) for more information on moving your account.
+
+## Export & Import
+
+In the export & import section, you can export data from your GoToSocial account, or import data into it.
+
+![The export/import page.](../assets/user-settings-export-import.png)
+
+### Export
+
+To export your following, followers, lists, account blocks, or account mutes, you can use the button on this page.
+
+All exports will be served in Mastodon-compatible CSV format, so you can import them later into Mastodon or another GoToSocial instance, if you like.
+
+### Import
+
+You can use the import section to import data from another account into your GoToSocial account, using CSV files exported from the other account.
+
+This is useful in cases where you've [migrated your account](./migration.md) to a GoToSocial account, and you want to keep your list of accounts that you followed, blocked, etc., on your previous account.
+
+To import data into your account, first click on "Browse" and select a Mastodon-compatible CSV file [exported from Mastodon](https://docs.joinmastodon.org/user/moving/#export) or another compatible instance.
+
+Then, use the drop-down selector to pick what kind of data you are uploading via the CSV file.
+
+!!! warning
+    Be careful when selecting "type" or you may end up accidentally blocking a bunch of accounts you meant to follow, or vice versa!
+
+Then choose whether you want to either **merge** the new data with the existing data of that type on your GoToSocial account, or whether you want to **overwrite** existing data of that type with the data contained in the CSV file.
+
+If you choose **merge**, then any data contained in the CSV file will be added to existing data without removing any of that existing data.
+
+For example, if you follow `account1`, and `account2` from your GoToSocial account, and you're uploading a CSV file containing follows of `account3`, and `account4`, and using mode **merge**, then at the end of the import you will be following `account1`, `account2`, `account3`, and `account4`.
+
+If you choose **overwrite**, then any data contained in the CSV file will *replace* the existing data, by removing entries not contained in the CSV file.
+
+For example, if you follow `account1`, and `account2` from your GoToSocial account, and you're uploading a CSV file containing follows of `account3`, and `account4`, and using mode **overwrite**, then at the end of the import you will be following `account3`, and `account4`. Your follows of `account1` and `account2` will be removed.
+
+Both merge and overwrite operations are idempotent, which basically means that duplicate entries in the existing data and in the CSV file are not an issue, and you can do imports of the same data multiple times if you need to retry importing for whatever reason.
+
+!!! info
+    For a variety of reasons, it will not always be possible to recreate every entry in an uploaded CSV file via importing. For example, say you are trying to import a CSV of follows containing `example_account`, but `example_account`'s instance has gone offline, or their instance blocks yours, or your instance blocks theirs, etc. In this case, the follow of `example_account` would not be created.

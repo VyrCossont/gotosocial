@@ -46,7 +46,7 @@ EXPECT=$(cat << "EOF"
         "follow-request-mem-ratio": 2,
         "in-reply-to-ids-mem-ratio": 3,
         "instance-mem-ratio": 1,
-        "interaction-approval-mem-ratio": 1,
+        "interaction-request-mem-ratio": 1,
         "list-entry-mem-ratio": 2,
         "list-mem-ratio": 1,
         "marker-mem-ratio": 0.5,
@@ -59,6 +59,7 @@ EXPECT=$(cat << "EOF"
         "poll-vote-ids-mem-ratio": 2,
         "poll-vote-mem-ratio": 2,
         "report-mem-ratio": 1,
+        "sin-bin-status-mem-ratio": 0.5,
         "status-bookmark-ids-mem-ratio": 2,
         "status-bookmark-mem-ratio": 0.5,
         "status-fave-ids-mem-ratio": 3,
@@ -81,6 +82,7 @@ EXPECT=$(cat << "EOF"
     "db-max-open-conns-multiplier": 3,
     "db-password": "hunter2",
     "db-port": 6969,
+    "db-postgres-connection-string": "",
     "db-sqlite-busy-timeout": 1000000000,
     "db-sqlite-cache-size": 0,
     "db-sqlite-journal-mode": "DELETE",
@@ -95,7 +97,7 @@ EXPECT=$(cat << "EOF"
     "http-client": {
         "allow-ips": [],
         "block-ips": [],
-        "timeout": 10000000000,
+        "timeout": 30000000000,
         "tls-insecure-skip-verify": false
     },
     "instance-deliver-to-shared-inboxes": false,
@@ -126,6 +128,7 @@ EXPECT=$(cat << "EOF"
     "media-description-min-chars": 69,
     "media-emoji-local-max-size": 420,
     "media-emoji-remote-max-size": 420,
+    "media-ffmpeg-pool-size": 8,
     "media-local-max-size": 420,
     "media-remote-cache-days": 30,
     "media-remote-max-size": 420,
@@ -173,6 +176,7 @@ EXPECT=$(cat << "EOF"
     "storage-s3-bucket": "gts",
     "storage-s3-endpoint": "localhost:9000",
     "storage-s3-proxy": true,
+    "storage-s3-redirect-url": "",
     "storage-s3-secret-key": "miniostorage",
     "storage-s3-use-ssl": false,
     "syslog-address": "127.0.0.1:6969",
@@ -210,6 +214,7 @@ GTS_BIND_ADDRESS='127.0.0.1' \
 GTS_PORT=6969 \
 GTS_TRUSTED_PROXIES='127.0.0.1/32,docker.host.local' \
 GTS_DB_TYPE='sqlite' \
+GTS_DB_POSTGRES_CONNECTION_STRING='' \
 GTS_DB_ADDRESS=':memory:' \
 GTS_DB_PORT=6969 \
 GTS_DB_USER='sex-haver' \
@@ -244,6 +249,7 @@ GTS_MEDIA_REMOTE_MAX_SIZE=420 \
 GTS_MEDIA_REMOTE_CACHE_DAYS=30 \
 GTS_MEDIA_EMOJI_LOCAL_MAX_SIZE=420 \
 GTS_MEDIA_EMOJI_REMOTE_MAX_SIZE=420 \
+GTS_MEDIA_FFMPEG_POOL_SIZE=8 \
 GTS_METRICS_AUTH_ENABLED=false \
 GTS_METRICS_ENABLED=false \
 GTS_STORAGE_BACKEND='local' \
@@ -253,6 +259,7 @@ GTS_STORAGE_S3_SECRET_KEY='miniostorage' \
 GTS_STORAGE_S3_ENDPOINT='localhost:9000' \
 GTS_STORAGE_S3_USE_SSL='false' \
 GTS_STORAGE_S3_PROXY='true' \
+GTS_STORAGE_S3_REDIRECT_URL='' \
 GTS_STORAGE_S3_BUCKET='gts' \
 GTS_STATUSES_MAX_CHARS=69 \
 GTS_STATUSES_CW_MAX_CHARS=420 \

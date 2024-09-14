@@ -19,6 +19,7 @@ package media
 
 import (
 	"context"
+	"os"
 
 	errorsv2 "codeberg.org/gruf/go-errors/v2"
 	"codeberg.org/gruf/go-runners"
@@ -161,7 +162,7 @@ func (p *ProcessingMedia) store(ctx context.Context) error {
 
 	// Pass input file through ffprobe to
 	// parse further metadata information.
-	result, err := ffprobe(ctx, temppath)
+	result, err := probe(ctx, temppath)
 	if err != nil && !isUnsupportedTypeErr(err) {
 		return gtserror.Newf("ffprobe error: %w", err)
 	} else if result == nil {
@@ -175,25 +176,36 @@ func (p *ProcessingMedia) store(ctx context.Context) error {
 	// This will always be used regardless of type,
 	// as even audio files may contain embedded album art.
 	width, height, framerate := result.ImageMeta()
+	aspect := util.Div(float32(width), float32(height))
 	p.media.FileMeta.Original.Width = width
 	p.media.FileMeta.Original.Height = height
 	p.media.FileMeta.Original.Size = (width * height)
-	p.media.FileMeta.Original.Aspect = util.Div(float32(width), float32(height))
+	p.media.FileMeta.Original.Aspect = aspect
 	p.media.FileMeta.Original.Framerate = util.PtrIf(framerate)
 	p.media.FileMeta.Original.Duration = util.PtrIf(float32(result.duration))
 	p.media.FileMeta.Original.Bitrate = util.PtrIf(result.bitrate)
 
 	// Set media type from ffprobe format data.
 	p.media.Type, ext = result.GetFileType()
-	switch p.media.Type {
 
+	// Add file extension to path.
+	newpath := temppath + "." + ext
+
+	// Before ffmpeg processing, rename to set file ext.
+	if err := os.Rename(temppath, newpath); err != nil {
+		return gtserror.Newf("error renaming to %s - >%s: %w", temppath, newpath, err)
+	}
+
+	// Update path var
+	// AFTER successful.
+	temppath = newpath
+
+	switch p.media.Type {
 	case gtsmodel.FileTypeImage,
-		gtsmodel.FileTypeVideo:
-		// Pass file through ffmpeg clearing
-		// any excess metadata (e.g. EXIF).
-		if err := ffmpegClearMetadata(ctx,
-			temppath, ext,
-		); err != nil {
+		gtsmodel.FileTypeVideo,
+		gtsmodel.FileTypeGifv:
+		// Attempt to clean as metadata from file as possible.
+		if err := clearMetadata(ctx, temppath); err != nil {
 			return gtserror.Newf("error cleaning metadata: %w", err)
 		}
 
@@ -207,38 +219,37 @@ func (p *ProcessingMedia) store(ctx context.Context) error {
 	}
 
 	if width > 0 && height > 0 {
-		// Determine thumbnail dimensions to use.
-		thumbWidth, thumbHeight := thumbSize(width, height)
+		// Determine thumbnail dimens to use.
+		thumbWidth, thumbHeight := thumbSize(
+			width,
+			height,
+			aspect,
+		)
 		p.media.FileMeta.Small.Width = thumbWidth
 		p.media.FileMeta.Small.Height = thumbHeight
 		p.media.FileMeta.Small.Size = (thumbWidth * thumbHeight)
-		p.media.FileMeta.Small.Aspect = float32(thumbWidth) / float32(thumbHeight)
+		p.media.FileMeta.Small.Aspect = aspect
 
-		// Generate a thumbnail image from input image path.
-		thumbpath, err = ffmpegGenerateThumb(ctx, temppath,
+		// Determine if blurhash needs generating.
+		needBlurhash := (p.media.Blurhash == "")
+		var newBlurhash string
+
+		// Generate thumbnail, and new blurhash if need from media.
+		thumbpath, newBlurhash, err = generateThumb(ctx, temppath,
 			thumbWidth,
 			thumbHeight,
+			result.orientation,
+			result.PixFmt(),
+			needBlurhash,
 		)
 		if err != nil {
 			return gtserror.Newf("error generating image thumb: %w", err)
 		}
 
-		if p.media.Blurhash == "" {
-			// Generate blurhash (if not already) from thumbnail.
-			p.media.Blurhash, err = generateBlurhash(thumbpath)
-			if err != nil {
-				return gtserror.Newf("error generating thumb blurhash: %w", err)
-			}
+		if needBlurhash {
+			// Set newly determined blurhash.
+			p.media.Blurhash = newBlurhash
 		}
-
-		// Calculate final media attachment thumbnail path.
-		p.media.Thumbnail.Path = uris.StoragePathForAttachment(
-			p.media.AccountID,
-			string(TypeAttachment),
-			string(SizeSmall),
-			p.media.ID,
-			"webp",
-		)
 	}
 
 	// Calculate final media attachment file path.
@@ -263,6 +274,18 @@ func (p *ProcessingMedia) store(ctx context.Context) error {
 	p.media.File.FileSize = int(filesz)
 
 	if thumbpath != "" {
+		// Determine final thumbnail ext.
+		thumbExt := getExtension(thumbpath)
+
+		// Calculate final media attachment thumbnail path.
+		p.media.Thumbnail.Path = uris.StoragePathForAttachment(
+			p.media.AccountID,
+			string(TypeAttachment),
+			string(SizeSmall),
+			p.media.ID,
+			thumbExt,
+		)
+
 		// Copy thumbnail file into storage at path.
 		thumbsz, err := p.mgr.state.Storage.PutFile(ctx,
 			p.media.Thumbnail.Path,
@@ -274,6 +297,18 @@ func (p *ProcessingMedia) store(ctx context.Context) error {
 
 		// Set final determined thumbnail size.
 		p.media.Thumbnail.FileSize = int(thumbsz)
+
+		// Determine thumbnail content-type from thumb ext.
+		p.media.Thumbnail.ContentType = getMimeType(thumbExt)
+
+		// Generate a media attachment thumbnail URL.
+		p.media.Thumbnail.URL = uris.URIForAttachment(
+			p.media.AccountID,
+			string(TypeAttachment),
+			string(SizeSmall),
+			p.media.ID,
+			thumbExt,
+		)
 	}
 
 	// Generate a media attachment URL.
@@ -285,21 +320,9 @@ func (p *ProcessingMedia) store(ctx context.Context) error {
 		ext,
 	)
 
-	// Generate a media attachment thumbnail URL.
-	p.media.Thumbnail.URL = uris.URIForAttachment(
-		p.media.AccountID,
-		string(TypeAttachment),
-		string(SizeSmall),
-		p.media.ID,
-		"webp",
-	)
-
 	// Get mimetype for the file container
 	// type, falling back to generic data.
 	p.media.File.ContentType = getMimeType(ext)
-
-	// Set the known thumbnail content type.
-	p.media.Thumbnail.ContentType = "image/webp"
 
 	// We can now consider this cached.
 	p.media.Cached = util.Ptr(true)

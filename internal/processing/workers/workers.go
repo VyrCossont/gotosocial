@@ -22,6 +22,7 @@ import (
 	"github.com/superseriousbusiness/gotosocial/internal/federation"
 	"github.com/superseriousbusiness/gotosocial/internal/filter/visibility"
 	"github.com/superseriousbusiness/gotosocial/internal/processing/account"
+	"github.com/superseriousbusiness/gotosocial/internal/processing/common"
 	"github.com/superseriousbusiness/gotosocial/internal/processing/conversations"
 	"github.com/superseriousbusiness/gotosocial/internal/processing/media"
 	"github.com/superseriousbusiness/gotosocial/internal/processing/stream"
@@ -38,6 +39,7 @@ type Processor struct {
 
 func New(
 	state *state.State,
+	common *common.Processor,
 	federator *federation.Federator,
 	converter *typeutils.Converter,
 	visFilter *visibility.Filter,
@@ -68,10 +70,11 @@ func New(
 
 	// Init shared util funcs.
 	utils := &utils{
-		state:   state,
-		media:   media,
-		account: account,
-		surface: surface,
+		state:     state,
+		media:     media,
+		account:   account,
+		surface:   surface,
+		converter: converter,
 	}
 
 	return Processor{
@@ -82,6 +85,7 @@ func New(
 			surface:   surface,
 			federate:  federate,
 			account:   account,
+			common:    common,
 			utils:     utils,
 		},
 		fediAPI: fediAPI{
@@ -89,6 +93,7 @@ func New(
 			surface:  surface,
 			federate: federate,
 			account:  account,
+			common:   common,
 			utils:    utils,
 		},
 	}

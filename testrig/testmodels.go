@@ -658,6 +658,7 @@ func NewTestAccountSettings() map[string]*gtsmodel.AccountSettings {
 			Language:        "en",
 			EnableRSS:       util.Ptr(false),
 			HideCollections: util.Ptr(false),
+			WebVisibility:   gtsmodel.VisibilityPublic,
 		},
 		"admin_account": {
 			AccountID:       "01F8MH17FWEB39HZJ76B6VXSKF",
@@ -668,6 +669,7 @@ func NewTestAccountSettings() map[string]*gtsmodel.AccountSettings {
 			Language:        "en",
 			EnableRSS:       util.Ptr(true),
 			HideCollections: util.Ptr(false),
+			WebVisibility:   gtsmodel.VisibilityPublic,
 		},
 		"local_account_1": {
 			AccountID:       "01F8MH1H7YV1Z7D2C8K2730QBF",
@@ -678,6 +680,7 @@ func NewTestAccountSettings() map[string]*gtsmodel.AccountSettings {
 			Language:        "en",
 			EnableRSS:       util.Ptr(true),
 			HideCollections: util.Ptr(false),
+			WebVisibility:   gtsmodel.VisibilityUnlocked,
 		},
 		"local_account_2": {
 			AccountID:       "01F8MH5NBDF2MV7CTC4Q5128HF",
@@ -688,6 +691,7 @@ func NewTestAccountSettings() map[string]*gtsmodel.AccountSettings {
 			Language:        "fr",
 			EnableRSS:       util.Ptr(false),
 			HideCollections: util.Ptr(true),
+			WebVisibility:   gtsmodel.VisibilityPublic,
 		},
 	}
 }
@@ -736,14 +740,14 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Blurhash:          "LIIE|gRj00WB-;j[t7j[4nWBj[Rj",
 			Processing:        2,
 			File: gtsmodel.File{
-				Path:        "01F8MH17FWEB39HZJ76B6VXSKF/attachment/original/01F8MH6NEM8D7527KZAECTCR76.jpg",
+				Path:        "01F8MH17FWEB39HZJ76B6VXSKF/attachment/original/01F8MH6NEM8D7527KZAECTCR76.jpeg",
 				ContentType: "image/jpeg",
 				FileSize:    62529,
 			},
 			Thumbnail: gtsmodel.Thumbnail{
-				Path:        "01F8MH17FWEB39HZJ76B6VXSKF/attachment/small/01F8MH6NEM8D7527KZAECTCR76.webp",
+				Path:        "01F8MH17FWEB39HZJ76B6VXSKF/attachment/small/01F8MH6NEM8D7527KZAECTCR76.jpeg",
 				ContentType: "image/webp",
-				FileSize:    5376,
+				FileSize:    17605,
 				URL:         "http://localhost:8080/fileserver/01F8MH17FWEB39HZJ76B6VXSKF/attachment/small/01F8MH6NEM8D7527KZAECTCR76.webp",
 				RemoteURL:   "",
 			},
@@ -788,9 +792,9 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 				FileSize:    1109138,
 			},
 			Thumbnail: gtsmodel.Thumbnail{
-				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01F8MH7TDVANYKWVE8VVKFPJTJ.webp",
-				ContentType: "image/webp",
-				FileSize:    6336,
+				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01F8MH7TDVANYKWVE8VVKFPJTJ.jpeg",
+				ContentType: "image/jpeg",
+				FileSize:    10270,
 				URL:         "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01F8MH7TDVANYKWVE8VVKFPJTJ.webp",
 				RemoteURL:   "",
 			},
@@ -840,7 +844,7 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Thumbnail: gtsmodel.Thumbnail{
 				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01CDR64G398ADCHXK08WWTHEZ5.webp",
 				ContentType: "image/webp",
-				FileSize:    5446,
+				FileSize:    11570,
 				URL:         "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01CDR64G398ADCHXK08WWTHEZ5.webp",
 				RemoteURL:   "",
 			},
@@ -885,9 +889,9 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 				FileSize:    27759,
 			},
 			Thumbnail: gtsmodel.Thumbnail{
-				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01F8MH8RMYQ6MSNY3JM2XT1CQ5.webp",
-				ContentType: "image/webp",
-				FileSize:    4930,
+				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01F8MH8RMYQ6MSNY3JM2XT1CQ5.jpeg",
+				ContentType: "image/jpeg",
+				FileSize:    14665,
 				URL:         "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01F8MH8RMYQ6MSNY3JM2XT1CQ5.webp",
 				RemoteURL:   "",
 			},
@@ -927,14 +931,14 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Blurhash:          "LHI:dk=G|rj]H[J-5roJvnr@Opag",
 			Processing:        2,
 			File: gtsmodel.File{
-				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
+				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpeg",
 				ContentType: "image/jpeg",
 				FileSize:    457680,
 			},
 			Thumbnail: gtsmodel.Thumbnail{
-				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
-				ContentType: "image/webp",
-				FileSize:    36188,
+				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.jpeg",
+				ContentType: "image/jpeg",
+				FileSize:    50381,
 				URL:         "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
 				RemoteURL:   "",
 			},
@@ -974,14 +978,14 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Blurhash:          "L17KPDs:$ykDJroJ-RoJ0fR+xVjY",
 			Processing:        2,
 			File: gtsmodel.File{
-				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
+				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpeg",
 				ContentType: "image/jpeg",
 				FileSize:    517226,
 			},
 			Thumbnail: gtsmodel.Thumbnail{
-				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
-				ContentType: "image/webp",
-				FileSize:    10200,
+				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.jpeg",
+				ContentType: "image/jpeg",
+				FileSize:    26794,
 				URL:         "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
 				RemoteURL:   "",
 			},
@@ -1031,7 +1035,7 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Thumbnail: gtsmodel.Thumbnail{
 				Path:        "01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01J2M20K6K9XQC4WSB961YJHV6.webp",
 				ContentType: "image/webp",
-				FileSize:    4652,
+				FileSize:    11624,
 				URL:         "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/attachment/small/01J2M20K6K9XQC4WSB961YJHV6.webp",
 				RemoteURL:   "",
 			},
@@ -1071,14 +1075,14 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Blurhash:          "L3Q9_@4n9E?axW4mD$Mx~q00Di%L",
 			Processing:        2,
 			File: gtsmodel.File{
-				Path:        "01F8MH5ZK5VRH73AKHQM6Y9VNX/attachment/original/01FVW7RXPQ8YJHTEXYPE7Q8ZY0.jpg",
+				Path:        "01F8MH5ZK5VRH73AKHQM6Y9VNX/attachment/original/01FVW7RXPQ8YJHTEXYPE7Q8ZY0.jpeg",
 				ContentType: "image/jpeg",
 				FileSize:    19310,
 			},
 			Thumbnail: gtsmodel.Thumbnail{
-				Path:        "01F8MH5ZK5VRH73AKHQM6Y9VNX/attachment/small/01FVW7RXPQ8YJHTEXYPE7Q8ZY0.webp",
-				ContentType: "image/webp",
-				FileSize:    9128,
+				Path:        "01F8MH5ZK5VRH73AKHQM6Y9VNX/attachment/small/01FVW7RXPQ8YJHTEXYPE7Q8ZY0.jpeg",
+				ContentType: "image/jpeg",
+				FileSize:    20395,
 				URL:         "http://localhost:8080/fileserver/01F8MH5ZK5VRH73AKHQM6Y9VNX/attachment/small/01FVW7RXPQ8YJHTEXYPE7Q8ZY0.webp",
 			},
 			Avatar: util.Ptr(false),
@@ -1117,14 +1121,14 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Blurhash:          "L3Q9_@4n9E?axW4mD$Mx~q00Di%L",
 			Processing:        2,
 			File: gtsmodel.File{
-				Path:        "062G5WYKY35KKD12EMSM3F8PJ8/attachment/original/01PFPMWK2FF0D9WMHEJHR07C3R.jpg",
+				Path:        "062G5WYKY35KKD12EMSM3F8PJ8/attachment/original/01PFPMWK2FF0D9WMHEJHR07C3R.jpeg",
 				ContentType: "image/jpeg",
 				FileSize:    19310,
 			},
 			Thumbnail: gtsmodel.Thumbnail{
-				Path:        "062G5WYKY35KKD12EMSM3F8PJ8/attachment/small/01PFPMWK2FF0D9WMHEJHR07C3R.webp",
+				Path:        "062G5WYKY35KKD12EMSM3F8PJ8/attachment/small/01PFPMWK2FF0D9WMHEJHR07C3R.jpeg",
 				ContentType: "image/webp",
-				FileSize:    9128,
+				FileSize:    20395,
 				URL:         "http://localhost:8080/fileserver/062G5WYKY35KKD12EMSM3F8PJ8/header/small/01PFPMWK2FF0D9WMHEJHR07C3R.webp",
 			},
 			Avatar: util.Ptr(false),
@@ -1169,7 +1173,7 @@ func NewTestAttachments() map[string]*gtsmodel.MediaAttachment {
 			Thumbnail: gtsmodel.Thumbnail{
 				Path:        "01FHMQX3GAABWSM0S2VZEC2SWC/attachment/small/01HE7Y3C432WRSNS10EZM86SA5.webp",
 				ContentType: "image/webp",
-				FileSize:    42208,
+				FileSize:    55966,
 				URL:         "http://localhost:8080/fileserver/01FHMQX3GAABWSM0S2VZEC2SWC/attachment/small/01HE7Y3C432WRSNS10EZM86SA5.webp",
 			},
 			Avatar: util.Ptr(false),
@@ -1355,11 +1359,11 @@ func newTestStoredAttachments() map[string]filenames {
 	return map[string]filenames{
 		"admin_account_status_1_attachment_1": {
 			Original: "welcome-original.jpg",
-			Small:    "welcome-small.webp",
+			Small:    "welcome-small.jpeg",
 		},
 		"local_account_1_status_4_attachment_1": {
 			Original: "trent-original.gif",
-			Small:    "trent-small.webp",
+			Small:    "trent-small.jpeg",
 		},
 		"local_account_1_status_4_attachment_2": {
 			Original: "cowlick-original.mp4",
@@ -1367,15 +1371,15 @@ func newTestStoredAttachments() map[string]filenames {
 		},
 		"local_account_1_unattached_1": {
 			Original: "ohyou-original.jpg",
-			Small:    "ohyou-small.webp",
+			Small:    "ohyou-small.jpeg",
 		},
 		"local_account_1_avatar": {
 			Original: "zork-original.jpg",
-			Small:    "zork-small.webp",
+			Small:    "zork-small.jpeg",
 		},
 		"local_account_1_header": {
 			Original: "team-fortress-original.jpg",
-			Small:    "team-fortress-small.webp",
+			Small:    "team-fortress-small.jpeg",
 		},
 		"local_account_1_status_8_attachment_1": {
 			Original: "ghosts-original.mp3",
@@ -1383,11 +1387,11 @@ func newTestStoredAttachments() map[string]filenames {
 		},
 		"remote_account_1_status_1_attachment_1": {
 			Original: "thoughtsofdog-original.jpg",
-			Small:    "thoughtsofdog-small.webp",
+			Small:    "thoughtsofdog-small.jpeg",
 		},
 		"remote_account_2_status_1_attachment_1": {
 			Original: "sloth-original.jpg",
-			Small:    "sloth-small.webp",
+			Small:    "sloth-small.jpeg",
 		},
 	}
 }
@@ -1509,6 +1513,31 @@ func NewTestStatuses() map[string]*gtsmodel.Status {
 			ActivityStreamsType:      ap.ObjectNote,
 			PendingApproval:          util.Ptr(false),
 		},
+		"admin_account_status_5": {
+			ID:                       "01J5QVB9VC76NPPRQ207GG4DRZ",
+			URI:                      "http://localhost:8080/users/admin/statuses/01J5QVB9VC76NPPRQ207GG4DRZ",
+			URL:                      "http://localhost:8080/@admin/statuses/01J5QVB9VC76NPPRQ207GG4DRZ",
+			Content:                  `<p>Hi <span class="h-card"><a href="http://localhost:8080/@1happyturtle" class="u-url mention" rel="nofollow noreferrer noopener" target="_blank">@<span>1happyturtle</span></a></span>, can I reply?</p>`,
+			Text:                     "Hi @1happyturtle, can I reply?",
+			CreatedAt:                TimeMustParse("2024-02-20T12:41:37+02:00"),
+			UpdatedAt:                TimeMustParse("2024-02-20T12:41:37+02:00"),
+			Local:                    util.Ptr(true),
+			AccountURI:               "http://localhost:8080/users/admin",
+			MentionIDs:               []string{"01J5QVP69ANF1K4WHES6GA4WXP"},
+			AccountID:                "01F8MH17FWEB39HZJ76B6VXSKF",
+			InReplyToID:              "01F8MHC8VWDRBQR0N1BATDDEM5",
+			InReplyToAccountID:       "01F8MH5NBDF2MV7CTC4Q5128HF",
+			InReplyToURI:             "http://localhost:8080/users/1happyturtle/statuses/01F8MHC8VWDRBQR0N1BATDDEM5",
+			BoostOfID:                "",
+			BoostOfAccountID:         "",
+			ThreadID:                 "01HCWE4P0EW9HBA5WHW97D5YV0",
+			Visibility:               gtsmodel.VisibilityUnlocked,
+			Sensitive:                util.Ptr(false),
+			CreatedWithApplicationID: "01F8MGXQRHYF5QPMTMXP78QC2F",
+			Federated:                util.Ptr(true),
+			ActivityStreamsType:      ap.ObjectNote,
+			PendingApproval:          util.Ptr(true),
+		},
 		"local_account_1_status_1": {
 			ID:                       "01F8MHAMCHF6Y650WCRSCP4WMY",
 			URI:                      "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
@@ -1536,8 +1565,8 @@ func NewTestStatuses() map[string]*gtsmodel.Status {
 			ID:                       "01F8MHAYFKS4KMXF8K5Y1C0KRN",
 			URI:                      "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAYFKS4KMXF8K5Y1C0KRN",
 			URL:                      "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAYFKS4KMXF8K5Y1C0KRN",
-			Content:                  "this is an unlocked local-only post that shouldn't federate, but it's still boostable, replyable, and likeable",
-			Text:                     "this is an unlocked local-only post that shouldn't federate, but it's still boostable, replyable, and likeable",
+			Content:                  "this is a Public local-only post that shouldn't federate, but it's still boostable, replyable, and likeable",
+			Text:                     "this is a Public local-only post that shouldn't federate, but it's still boostable, replyable, and likeable",
 			CreatedAt:                TimeMustParse("2021-10-20T12:40:37+02:00"),
 			UpdatedAt:                TimeMustParse("2021-10-20T12:40:37+02:00"),
 			Local:                    util.Ptr(true),
@@ -1547,7 +1576,7 @@ func NewTestStatuses() map[string]*gtsmodel.Status {
 			BoostOfID:                "",
 			ThreadID:                 "01HCWDVTW3HQWSX66VJQ91Z1RH",
 			ContentWarning:           "",
-			Visibility:               gtsmodel.VisibilityUnlocked,
+			Visibility:               gtsmodel.VisibilityPublic,
 			Sensitive:                util.Ptr(false),
 			Language:                 "en",
 			CreatedWithApplicationID: "01F8MGY43H3N2C8EWPR2FPYEXG",
@@ -2298,6 +2327,10 @@ func NewTestThreadToStatus() []*gtsmodel.ThreadToStatus {
 			ThreadID: "01HCWE7ZNC2SS4P05WA5QYED23",
 			StatusID: "01G20ZM733MGN8J344T4ZDDFY1",
 		},
+		{
+			ThreadID: "01HCWE4P0EW9HBA5WHW97D5YV0",
+			StatusID: "01J5QVB9VC76NPPRQ207GG4DRZ",
+		},
 	}
 }
 
@@ -2351,6 +2384,18 @@ func NewTestMentions() map[string]*gtsmodel.Mention {
 			NameString:       "@the_mighty_zork",
 			TargetAccountURI: "http://localhost:8080/users/the_mighty_zork",
 			TargetAccountURL: "http://localhost:8080/@the_mighty_zork",
+		},
+		"admin_account_mention_turtle": {
+			ID:               "01J5QVP69ANF1K4WHES6GA4WXP",
+			StatusID:         "01J5QVB9VC76NPPRQ207GG4DRZ",
+			CreatedAt:        TimeMustParse("2024-02-20T12:41:37+02:00"),
+			UpdatedAt:        TimeMustParse("2024-02-20T12:41:37+02:00"),
+			OriginAccountID:  "01F8MH17FWEB39HZJ76B6VXSKF",
+			OriginAccountURI: "http://localhost:8080/users/admin",
+			TargetAccountID:  "01F8MH5NBDF2MV7CTC4Q5128HF",
+			NameString:       "@1happyturtle",
+			TargetAccountURI: "http://localhost:8080/users/1happyturtle",
+			TargetAccountURL: "http://localhost:8080/@1happyturtle",
 		},
 		"remote_account_2_mention_admin": {
 			ID:               "01HE7XQNMKTVC8MNPCE1JGK4J3",
@@ -2513,6 +2558,7 @@ func NewTestLists() map[string]*gtsmodel.List {
 			Title:         "Cool Ass Posters From This Instance",
 			AccountID:     "01F8MH1H7YV1Z7D2C8K2730QBF",
 			RepliesPolicy: gtsmodel.RepliesPolicyFollowed,
+			Exclusive:     util.Ptr(false),
 		},
 	}
 }
@@ -3428,6 +3474,20 @@ func NewTestFilterStatuses() map[string]*gtsmodel.FilterStatus {
 func NewTestUserMutes() map[string]*gtsmodel.UserMute {
 	// Not currently used.
 	return map[string]*gtsmodel.UserMute{}
+}
+
+func NewTestInteractionRequests() map[string]*gtsmodel.InteractionRequest {
+	return map[string]*gtsmodel.InteractionRequest{
+		"admin_account_reply_turtle": {
+			ID:                   "01J5QVXCCEATJYSXM9H6MZT4JR",
+			CreatedAt:            TimeMustParse("2024-02-20T12:41:37+02:00"),
+			StatusID:             "01F8MHC8VWDRBQR0N1BATDDEM5",
+			TargetAccountID:      "01F8MH5NBDF2MV7CTC4Q5128HF",
+			InteractingAccountID: "01F8MH17FWEB39HZJ76B6VXSKF",
+			InteractionURI:       "http://localhost:8080/users/admin/statuses/01J5QVB9VC76NPPRQ207GG4DRZ",
+			InteractionType:      gtsmodel.InteractionReply,
+		},
+	}
 }
 
 // GetSignatureForActivity prepares a mock HTTP request as if it were going to deliver activity to destination signed for privkey and pubKeyID, signs the request and returns the header values.

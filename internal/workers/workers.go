@@ -49,13 +49,19 @@ type Workers struct {
 	// for asynchronous dereferencer jobs.
 	Dereference FnWorkerPool
 
+	// Processing provides a worker pool
+	// for asynchronous processing jobs,
+	// eg., import tasks, admin tasks.
+	Processing FnWorkerPool
+
 	// prevent pass-by-value.
 	_ nocopy
 }
 
 // StartScheduler starts the job scheduler.
 func (w *Workers) StartScheduler() {
-	_ = w.Scheduler.Start() // false = already running
+	_ = w.Scheduler.Start()
+	// false = already running
 	log.Info(nil, "started scheduler")
 }
 
@@ -80,11 +86,18 @@ func (w *Workers) Start() {
 	n = 4 * maxprocs
 	w.Dereference.Start(n)
 	log.Infof(nil, "started %d dereference workers", n)
+
+	n = 4 * maxprocs
+	w.Processing.Start(n)
+	log.Infof(nil, "started %d processing workers", n)
 }
 
-// Stop will stop all of the contained worker pools (and global scheduler).
+// Stop will stop all of the contained
+// worker pools (and global scheduler).
 func (w *Workers) Stop() {
-	_ = w.Scheduler.Stop() // false = not running
+	_ = w.Scheduler.Stop()
+	// false = not running
+	log.Info(nil, "stopped scheduler")
 
 	w.Delivery.Stop()
 	log.Info(nil, "stopped delivery workers")
@@ -97,6 +110,9 @@ func (w *Workers) Stop() {
 
 	w.Dereference.Stop()
 	log.Info(nil, "stopped dereference workers")
+
+	w.Processing.Stop()
+	log.Info(nil, "stopped processing workers")
 }
 
 // nocopy when embedded will signal linter to

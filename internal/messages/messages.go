@@ -230,7 +230,7 @@ func (msg *FromFediAPI) Serialize() ([]byte, error) {
 
 	// Set serialized AP object data if set.
 	if t, ok := msg.APObject.(vocab.Type); ok {
-		obj, err := t.Serialize()
+		obj, err := streams.Serialize(t)
 		if err != nil {
 			return nil, err
 		}
@@ -352,7 +352,7 @@ func resolveAPObject(data map[string]interface{}) (interface{}, error) {
 // we then need to wrangle back into the original type. So we also store the type name
 // and use this to determine the appropriate Go structure type to unmarshal into to.
 func resolveGTSModel(typ string, data []byte) (interface{}, error) {
-	if typ == "" && data == nil {
+	if typ == "" {
 		// No data given.
 		return nil, nil
 	}

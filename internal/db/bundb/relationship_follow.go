@@ -82,8 +82,15 @@ func (r *relationshipDB) GetFollowsByIDs(ctx context.Context, ids []string) ([]*
 	follows, err := r.state.Caches.DB.Follow.LoadIDs("ID",
 		ids,
 		func(uncached []string) ([]*gtsmodel.Follow, error) {
+			// Avoid querying
+			// if none uncached.
+			count := len(uncached)
+			if count == 0 {
+				return nil, nil
+			}
+
 			// Preallocate expected length of uncached follows.
-			follows := make([]*gtsmodel.Follow, 0, len(uncached))
+			follows := make([]*gtsmodel.Follow, 0, count)
 
 			// Perform database query scanning
 			// the remaining (uncached) IDs.
@@ -342,6 +349,12 @@ func (r *relationshipDB) DeleteAccountFollows(ctx context.Context, accountID str
 		).
 		Exec(ctx, &followIDs); err != nil {
 		return err
+	}
+
+	if len(followIDs) == 0 {
+		// Nothing
+		// to delete.
+		return nil
 	}
 
 	defer func() {

@@ -37,7 +37,12 @@ type InstancePatchTestSuite struct {
 }
 
 func (suite *InstancePatchTestSuite) instancePatch(fieldName string, fileName string, extraFields map[string][]string) (code int, body []byte) {
-	requestBody, w, err := testrig.CreateMultipartFormData(fieldName, fileName, extraFields)
+	var dataF testrig.DataF
+	if fieldName != "" && fileName != "" {
+		dataF = testrig.FileToDataF(fieldName, fileName)
+	}
+
+	requestBody, w, err := testrig.CreateMultipartFormData(dataF, extraFields)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -176,9 +181,13 @@ func (suite *InstancePatchTestSuite) TestInstancePatch1() {
     "emojis": [],
     "fields": [],
     "enable_rss": true,
-    "role": {
-      "name": "admin"
-    }
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
   },
   "max_toot_chars": 5000,
   "rules": [
@@ -312,9 +321,13 @@ func (suite *InstancePatchTestSuite) TestInstancePatch2() {
     "emojis": [],
     "fields": [],
     "enable_rss": true,
-    "role": {
-      "name": "admin"
-    }
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
   },
   "max_toot_chars": 5000,
   "rules": [
@@ -448,9 +461,13 @@ func (suite *InstancePatchTestSuite) TestInstancePatch3() {
     "emojis": [],
     "fields": [],
     "enable_rss": true,
-    "role": {
-      "name": "admin"
-    }
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
   },
   "max_toot_chars": 5000,
   "rules": [
@@ -487,7 +504,7 @@ func (suite *InstancePatchTestSuite) TestInstancePatch4() {
 
 func (suite *InstancePatchTestSuite) TestInstancePatch5() {
 	requestBody, w, err := testrig.CreateMultipartFormData(
-		"", "",
+		nil,
 		map[string][]string{
 			"short_description": {"<p>This is some html, which is <em>allowed</em> in short descriptions.</p>"},
 		})
@@ -635,9 +652,13 @@ func (suite *InstancePatchTestSuite) TestInstancePatch6() {
     "emojis": [],
     "fields": [],
     "enable_rss": true,
-    "role": {
-      "name": "admin"
-    }
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
   },
   "max_toot_chars": 5000,
   "rules": [
@@ -797,9 +818,13 @@ func (suite *InstancePatchTestSuite) TestInstancePatch8() {
     "emojis": [],
     "fields": [],
     "enable_rss": true,
-    "role": {
-      "name": "admin"
-    }
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
   },
   "max_toot_chars": 5000,
   "rules": [
@@ -833,7 +858,7 @@ func (suite *InstancePatchTestSuite) TestInstancePatch8() {
   "static_url": "http://localhost:8080/fileserver/01AY6P665V14JJR0AFVRT7311Y/attachment/small/`+instanceAccount.AvatarMediaAttachment.ID+`.webp",`+`
   "thumbnail_static_type": "image/webp",
   "thumbnail_description": "A bouncing little green peglin.",
-  "blurhash": "LE9kG#M}4YtO%dRkWEt5Dmoxx?WC"
+  "blurhash": "LE9801Rl4Yt5%dWCV]t5Dmoex?WC"
 }`, string(instanceV2ThumbnailJson))
 
 	// double extra special bonus: now update the image description without changing the image
@@ -970,9 +995,13 @@ func (suite *InstancePatchTestSuite) TestInstancePatch9() {
     "emojis": [],
     "fields": [],
     "enable_rss": true,
-    "role": {
-      "name": "admin"
-    }
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
   },
   "max_toot_chars": 5000,
   "rules": [

@@ -1,0 +1,161 @@
+/*
+  theme-title: Brutalist Dark
+  theme-description: (Pseudo-)monochrome brutality (dark version)
+*/
+
+:root {
+  /* Define our color palette, two whole colors, wow! */
+  --almost-black: #06170e;
+  --almost-white: #f1f3f2;
+
+  /* Overwrite orange trim */
+  --orange2: var(--almost-white);
+
+  /* Restyle basic colors */
+  --white1: var(--almost-black);
+  --white2: var(--almost-black);
+
+  /* Basic page styling (background + foreground) */
+  --bg:var(--almost-black);
+  --bg-accent: var(--almost-black);
+  --fg: var(--almost-white);
+  --fg-reduced: var(--almost-white);
+  --fg-accent: var(--almost-white);
+
+  /* Profile page styling (light) */
+  --profile-bg: var(--almost-black);
+
+  /* Statuses */
+  --status-bg: var(--almost-black);
+  --status-focus-bg: var(--almost-black);
+  --status-info-bg: var(--almost-black);
+  --status-focus-info-bg: var(--almost-black);
+
+  /* Used around statuses + other items */
+  --double-border: 0.5rem double var(--almost-white);
+  --dashed-border: 0.1rem dashed var(--almost-white);
+  --single-border: 0.2rem solid var(--almost-white);
+
+  /* Override some border stuff */
+  --boxshadow-border: var(--double-border);
+  --br: 0;
+  --br-inner: 0;
+}
+
+/* Scroll bar */
+html, body {
+  scrollbar-color: var(--almost-white) var(--almost-black);
+}
+
+.profile .profile-header {
+  border: var(--double-border);
+}
+
+.col-header {
+  border: var(--double-border);
+}
+
+.profile .about-user .col-header {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.profile .profile-header .basic-info .avatar-image-wrapper {
+  border: var(--single-border);
+}
+.status .status-header > address > a .avatar {
+  border: var(--single-border);
+}
+
+/* Make about sections transparent */
+.profile .about-user .fields,
+.profile .about-user .bio,
+.profile .about-user .accountstats {
+  border-left: var(--double-border);
+  border-right: var(--double-border);
+}
+
+/* Fiddle around with borders on about sections */
+.profile .about-user .fields .field:first-child {
+  border-top: var(--dashed-border);
+}
+.profile .about-user .fields .field {
+  border-bottom: var(--dashed-border);
+}
+.profile .about-user .accountstats {
+  border-top: var(--dashed-border);
+  border-bottom: var(--double-border);
+}
+
+/* Code snippets */
+.status .text .content pre,
+.status .text .content code {
+  background: var(--almost-black);
+  color: var(--almost-white);
+}
+
+/* Block quotes */
+.status .text .content blockquote {
+  background-color: var(--almost-white);
+  color: var(--almost-black);
+}
+
+/* Polls */
+.status .text .poll {
+  background-color: var(--almost-black);
+  border: var(--double-border);
+}
+.status .text .poll .poll-info {
+  background-color: var(--almost-black);
+  border: var(--dashed-border);
+}
+
+/* Status media */
+.status .media .media-wrapper {
+  border: var(--single-border);
+}
+.status .media .media-wrapper details .unknown-attachment .placeholder {
+  color: var(--almost-white);
+}
+.status .media .media-wrapper details video.plyr-video {
+  background: var(--almost-white);
+}
+
+/* Status info bars */
+.status .status-info,
+.status.expanded .status-info {
+  border-top: var(--dashed-border);
+}
+
+/* Make show more/less buttons more legible */
+.status button, .status .button {
+  background-color: var(--almost-white);
+  color: var(--almost-black);
+  border: var(--dashed-border);
+}
+.status button:hover, .status .button:hover {
+  background-color: var(--almost-black);
+  color: var(--almost-white);
+  border: var(--dashed-border);
+}
+
+/*
+  Border looks terrible on emoji hover
+  with this scheme so disable it.
+*/
+.emoji:hover {
+  border: none;
+}
+
+/*
+  Our borders are real thick + juicy,
+  so outdent the left margin a bit
+  more to compensate.
+*/
+.thread .status.indent-1 .status-link,
+.thread .status.indent-2 .status-link,
+.thread .status.indent-3 .status-link,
+.thread .status.indent-4 .status-link,
+.thread .status.indent-5 .status-link { 
+  margin-left: -1rem;
+}

@@ -46,6 +46,8 @@ const (
 	FileserverPath   = "fileserver"    // FileserverPath is a path component for serving attachments + media
 	EmojiPath        = "emoji"         // EmojiPath represents the activitypub emoji location
 	TagsPath         = "tags"          // TagsPath represents the activitypub tags location
+	AcceptsPath      = "accepts"       // AcceptsPath represents the activitypub Accept's location
+	RejectsPath      = "rejects"       // RejectsPath represents the activitypub Reject's location
 )
 
 // UserURIs contains a bunch of UserURIs and URLs for a user, host, account, etc.
@@ -134,6 +136,22 @@ func GenerateURIForEmailConfirm(token string) string {
 	protocol := config.GetProtocol()
 	host := config.GetHost()
 	return fmt.Sprintf("%s://%s/%s?token=%s", protocol, host, ConfirmEmailPath, token)
+}
+
+// GenerateURIForAccept returns the AP URI for a new Accept activity -- something like:
+// https://example.org/users/whatever_user/accepts/01F7XTH1QGBAPMGF49WJZ91XGC
+func GenerateURIForAccept(username string, thisAcceptID string) string {
+	protocol := config.GetProtocol()
+	host := config.GetHost()
+	return fmt.Sprintf("%s://%s/%s/%s/%s/%s", protocol, host, UsersPath, username, AcceptsPath, thisAcceptID)
+}
+
+// GenerateURIForReject returns the AP URI for a new Reject activity -- something like:
+// https://example.org/users/whatever_user/rejects/01F7XTH1QGBAPMGF49WJZ91XGC
+func GenerateURIForReject(username string, thisRejectID string) string {
+	protocol := config.GetProtocol()
+	host := config.GetHost()
+	return fmt.Sprintf("%s://%s/%s/%s/%s/%s", protocol, host, UsersPath, username, RejectsPath, thisRejectID)
 }
 
 // GenerateURIsForAccount throws together a bunch of URIs for the given username, with the given protocol and host.
@@ -315,6 +333,11 @@ func IsBlockPath(id *url.URL) bool {
 // IsReportPath returns true if the given URL path corresponds to eg /reports/SOME_ULID_OF_A_REPORT
 func IsReportPath(id *url.URL) bool {
 	return regexes.ReportPath.MatchString(id.Path)
+}
+
+// IsAcceptsPath returns true if the given URL path corresponds to eg /users/example_username/accepts/SOME_ULID_OF_AN_ACCEPT
+func IsAcceptsPath(id *url.URL) bool {
+	return regexes.AcceptsPath.MatchString(id.Path)
 }
 
 // ParseStatusesPath returns the username and ulid from a path such as /users/example_username/statuses/SOME_ULID_OF_A_STATUS

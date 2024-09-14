@@ -149,7 +149,7 @@ func (suite *MediaCreateTestSuite) TestMediaCreateSuccessful() {
 	}
 
 	// create the request
-	buf, w, err := testrig.CreateMultipartFormData("file", "../../../../testrig/media/test-jpeg.jpg", map[string][]string{
+	buf, w, err := testrig.CreateMultipartFormData(testrig.FileToDataF("file", "../../../../testrig/media/test-jpeg.jpg"), map[string][]string{
 		"description": {"this is a test image -- a cool background from somewhere"},
 		"focus":       {"-0.5,0.5"},
 	})
@@ -206,7 +206,7 @@ func (suite *MediaCreateTestSuite) TestMediaCreateSuccessful() {
 			Y: 0.5,
 		},
 	}, *attachmentReply.Meta)
-	suite.Equal("LcBzLU#6RkRn~qvzRjWF?urqV@jc", *attachmentReply.Blurhash)
+	suite.Equal("LiB|W-#6RQR.~qvzRjWF_3rqV@a$", *attachmentReply.Blurhash)
 	suite.NotEmpty(attachmentReply.ID)
 	suite.NotEmpty(attachmentReply.URL)
 	suite.NotEmpty(attachmentReply.PreviewURL)
@@ -234,7 +234,7 @@ func (suite *MediaCreateTestSuite) TestMediaCreateSuccessfulV2() {
 	}
 
 	// create the request
-	buf, w, err := testrig.CreateMultipartFormData("file", "../../../../testrig/media/test-jpeg.jpg", map[string][]string{
+	buf, w, err := testrig.CreateMultipartFormData(testrig.FileToDataF("file", "../../../../testrig/media/test-jpeg.jpg"), map[string][]string{
 		"description": {"this is a test image -- a cool background from somewhere"},
 		"focus":       {"-0.5,0.5"},
 	})
@@ -291,7 +291,7 @@ func (suite *MediaCreateTestSuite) TestMediaCreateSuccessfulV2() {
 			Y: 0.5,
 		},
 	}, *attachmentReply.Meta)
-	suite.Equal("LcBzLU#6RkRn~qvzRjWF?urqV@jc", *attachmentReply.Blurhash)
+	suite.Equal("LiB|W-#6RQR.~qvzRjWF_3rqV@a$", *attachmentReply.Blurhash)
 	suite.NotEmpty(attachmentReply.ID)
 	suite.Nil(attachmentReply.URL)
 	suite.NotEmpty(attachmentReply.PreviewURL)
@@ -317,7 +317,7 @@ func (suite *MediaCreateTestSuite) TestMediaCreateLongDescription() {
 	description := base64.RawStdEncoding.EncodeToString(descriptionBytes)
 
 	// create the request
-	buf, w, err := testrig.CreateMultipartFormData("file", "../../../../testrig/media/test-jpeg.jpg", map[string][]string{
+	buf, w, err := testrig.CreateMultipartFormData(testrig.FileToDataF("file", "../../../../testrig/media/test-jpeg.jpg"), map[string][]string{
 		"description": {description},
 		"focus":       {"-0.5,0.5"},
 	})
@@ -358,7 +358,7 @@ func (suite *MediaCreateTestSuite) TestMediaCreateTooShortDescription() {
 	ctx.Set(oauth.SessionAuthorizedAccount, suite.testAccounts["local_account_1"])
 
 	// create the request
-	buf, w, err := testrig.CreateMultipartFormData("file", "../../../../testrig/media/test-jpeg.jpg", map[string][]string{
+	buf, w, err := testrig.CreateMultipartFormData(testrig.FileToDataF("file", "../../../../testrig/media/test-jpeg.jpg"), map[string][]string{
 		"description": {""}, // provide an empty description
 		"focus":       {"-0.5,0.5"},
 	})

@@ -21,86 +21,69 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	"image"
 	"io"
+	"io/fs"
 	"os"
-
-	"golang.org/x/image/webp"
+	"path"
 
 	"codeberg.org/gruf/go-bytesize"
 	"codeberg.org/gruf/go-iotools"
 	"codeberg.org/gruf/go-mimetypes"
-
-	"github.com/buckket/go-blurhash"
-	"github.com/disintegration/imaging"
 )
 
-// thumbSize returns the dimensions to use for an input
-// image of given width / height, for its outgoing thumbnail.
-// This maintains the original image aspect ratio.
-func thumbSize(width, height int) (int, int) {
-	const (
-		maxThumbWidth  = 512
-		maxThumbHeight = 512
-	)
-	switch {
-	// Simplest case, within bounds!
-	case width < maxThumbWidth &&
-		height < maxThumbHeight:
-		return width, height
-
-	// Width is larger side.
-	case width > height:
-		p := float32(width) / float32(maxThumbWidth)
-		return maxThumbWidth, int(float32(height) / p)
-
-	// Height is larger side.
-	case height > width:
-		p := float32(height) / float32(maxThumbHeight)
-		return int(float32(width) / p), maxThumbHeight
-
-	// Square.
-	default:
-		return maxThumbWidth, maxThumbHeight
-	}
+// file represents one file
+// with the given flag and perms.
+type file struct {
+	abs  string
+	flag int
+	perm os.FileMode
 }
 
-// webpDecode decodes the WebP at filepath into parsed image.Image.
-func webpDecode(filepath string) (image.Image, error) {
-	// Open the file at given path.
-	file, err := os.Open(filepath)
-	if err != nil {
-		return nil, err
+// allowFiles implements fs.FS to allow
+// access to a specified slice of files.
+type allowFiles []file
+
+// Open implements fs.FS.
+func (af allowFiles) Open(name string) (fs.File, error) {
+	for _, file := range af {
+		var (
+			abs  = file.abs
+			flag = file.flag
+			perm = file.perm
+		)
+
+		// Allowed to open file
+		// at absolute path.
+		if name == file.abs {
+			return os.OpenFile(abs, flag, perm)
+		}
+
+		// Check for other valid reads.
+		thisDir, thisFile := path.Split(file.abs)
+
+		// Allowed to read directory itself.
+		if name == thisDir || name == "." {
+			return os.OpenFile(thisDir, flag, perm)
+		}
+
+		// Allowed to read file
+		// itself (at relative path).
+		if name == thisFile {
+			return os.OpenFile(abs, flag, perm)
+		}
 	}
 
-	// Decode image from file.
-	img, err := webp.Decode(file)
-
-	// Done with file.
-	_ = file.Close()
-
-	return img, err
+	return nil, os.ErrPermission
 }
 
-// generateBlurhash generates a blurhash for JPEG at filepath.
-func generateBlurhash(filepath string) (string, error) {
-	// Decode JPEG file at given path.
-	img, err := webpDecode(filepath)
-	if err != nil {
-		return "", err
+// getExtension splits file extension from path.
+func getExtension(path string) string {
+	for i := len(path) - 1; i >= 0 && path[i] != '/'; i-- {
+		if path[i] == '.' {
+			return path[i+1:]
+		}
 	}
-
-	// for generating blurhashes, it's more cost effective to
-	// lose detail since it's blurry, so make a tiny version.
-	tiny := imaging.Resize(img, 64, 64, imaging.NearestNeighbor)
-
-	// Drop the larger image
-	// ref as soon as possible
-	// to allow GC to claim.
-	img = nil //nolint
-
-	// Generate blurhash for thumbnail.
-	return blurhash.Encode(4, 3, tiny)
+	return ""
 }
 
 // getMimeType returns a suitable mimetype for file extension.
@@ -117,15 +100,17 @@ func getMimeType(ext string) string {
 // chance that Linux's sendfile syscall can be utilised for optimal
 // draining of data source to temporary file storage.
 func drainToTmp(rc io.ReadCloser) (string, error) {
-	tmp, err := os.CreateTemp(os.TempDir(), "gotosocial-*")
+	defer rc.Close()
+
+	// Open new temporary file.
+	tmp, err := os.CreateTemp(
+		os.TempDir(),
+		"gotosocial-*",
+	)
 	if err != nil {
 		return "", err
 	}
-
-	// Close readers
-	// on func return.
 	defer tmp.Close()
-	defer rc.Close()
 
 	// Extract file path.
 	path := tmp.Name()

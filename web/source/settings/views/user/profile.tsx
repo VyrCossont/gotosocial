@@ -17,14 +17,13 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import {
 	useTextInput,
 	useFileInput,
 	useBoolInput,
 	useFieldArrayInput,
-	useRadioInput
 } from "../../lib/form";
 
 import useFormSubmit from "../../lib/form/submit";
@@ -35,7 +34,7 @@ import {
 	TextArea,
 	FileInput,
 	Checkbox,
-	RadioGroup
+	Select
 } from "../../components/form/inputs";
 
 import FormWithData from "../../lib/form/form-with-data";
@@ -81,15 +80,28 @@ function UserProfileForm({ data: profile }) {
 	
 	// Parse out available theme options into nice format.
 	const { data: themes } = useAccountThemesQuery();
-	let themeOptions = { "": "Default" };
-	themes?.forEach((theme) => {
-		let key = theme.file_name;
-		let value = theme.title;
-		if (theme.description) {
-			value += " - " + theme.description;
-		}
-		themeOptions[key] = value;
-	});
+	const themeOptions = useMemo(() => {
+		let themeOptions = [
+			<option key="" value="">
+				Default
+			</option>
+		];
+
+		themes?.forEach((theme) => {
+			const value = theme.file_name;
+			let text = theme.title;
+			if (theme.description) {
+				text += " - " + theme.description;
+			}
+			themeOptions.push(
+				<option key={value} value={value}>
+					{text}
+				</option>
+			);
+		});
+
+		return themeOptions;
+	}, [themes]);
 
 	const form = {
 		avatar: useFileInput("avatar", { withPreview: true }),
@@ -103,15 +115,13 @@ function UserProfileForm({ data: profile }) {
 		discoverable: useBoolInput("discoverable", { source: profile}),
 		enableRSS: useBoolInput("enable_rss", { source: profile }),
 		hideCollections: useBoolInput("hide_collections", { source: profile }),
+		webVisibility: useTextInput("web_visibility", { source: profile, valueSelector: (p) => p.source?.web_visibility }),
 		fields: useFieldArrayInput("fields_attributes", {
 			defaultValue: profile?.source?.fields,
 			length: instanceConfig.maxPinnedFields
 		}),
 		customCSS: useTextInput("custom_css", { source: profile, nosubmit: !instanceConfig.allowCustomCSS }),
-		theme: useRadioInput("theme", {
-			source: profile,
-			options: themeOptions,
-		}),
+		theme: useTextInput("theme", { source: profile }),
 	};
 
 	const [submitForm, result] = useFormSubmit(form, useUpdateCredentialsMutation(), {
@@ -169,9 +179,10 @@ function UserProfileForm({ data: profile }) {
 						<br/>
 						<span>After choosing theme and saving, <a href={profile.url} target="_blank">open your profile</a> and refresh to see changes.</span>
 					</div>
-					<RadioGroup
+					<Select
 						aria-labelledby="theme-label"
 						field={form.theme}
+						options={<>{themeOptions}</>}
 					/>
 				</div>
 			</div>
@@ -223,21 +234,32 @@ function UserProfileForm({ data: profile }) {
 					Learn more about these settings (opens in a new tab)
 				</a>
 			</div>
+			<Select
+				field={form.webVisibility}
+				label="Visibility level of posts to show on your profile, and in your RSS feed (if enabled)."
+				options={
+					<>
+						<option value="public">Show Public posts only (the GoToSocial default)</option>
+						<option value="unlisted">Show Public and Unlisted posts (the Mastodon default)</option>
+						<option value="none">Show no posts</option>
+					</>
+				}
+			/>
 			<Checkbox
 				field={form.locked}
-				label="Manually approve follow requests"
+				label="Manually approve follow requests."
 			/>
 			<Checkbox
 				field={form.discoverable}
-				label="Mark account as discoverable by search engines and directories"
+				label="Mark account as discoverable by search engines and directories."
 			/>
 			<Checkbox
 				field={form.enableRSS}
-				label="Enable RSS feed of Public posts"
+				label="Enable RSS feed of posts."
 			/>
 			<Checkbox
 				field={form.hideCollections}
-				label="Hide who you follow / are followed by"
+				label="Hide who you follow / are followed by."
 			/>
 
 			<div className="form-section-docs">

@@ -80,11 +80,13 @@ var Defaults = Configuration{
 	MediaEmojiRemoteMaxSize:  100 * bytesize.KiB,
 	MediaCleanupFrom:         "00:00",        // Midnight.
 	MediaCleanupEvery:        24 * time.Hour, // 1/day.
+	MediaFfmpegPoolSize:      1,
 
 	StorageBackend:       "local",
 	StorageLocalBasePath: "/gotosocial/storage",
 	StorageS3UseSSL:      true,
 	StorageS3Proxy:       false,
+	StorageS3RedirectURL: "",
 
 	StatusesMaxChars:           5000,
 	StatusesPollMaxOptions:     6,
@@ -179,7 +181,7 @@ var Defaults = Configuration{
 		FollowRequestIDsMemRatio:          2,
 		InReplyToIDsMemRatio:              3,
 		InstanceMemRatio:                  1,
-		InteractionApprovalMemRatio:       1,
+		InteractionRequestMemRatio:        1,
 		ListMemRatio:                      1,
 		ListEntryMemRatio:                 2,
 		MarkerMemRatio:                    0.5,
@@ -191,6 +193,7 @@ var Defaults = Configuration{
 		PollVoteMemRatio:                  2,
 		PollVoteIDsMemRatio:               2,
 		ReportMemRatio:                    1,
+		SinBinStatusMemRatio:              0.5,
 		StatusMemRatio:                    5,
 		StatusBookmarkMemRatio:            0.5,
 		StatusBookmarkIDsMemRatio:         2,
@@ -211,7 +214,7 @@ var Defaults = Configuration{
 	HTTPClient: HTTPClientConfiguration{
 		AllowIPs:              make([]string, 0),
 		BlockIPs:              make([]string, 0),
-		Timeout:               10 * time.Second,
+		Timeout:               30 * time.Second,
 		TLSInsecureSkipVerify: false,
 	},
 

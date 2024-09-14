@@ -23,19 +23,22 @@ import (
 )
 
 func testrigCommands() *cobra.Command {
-	testrigCmd := &cobra.Command{
-		Use:   "testrig",
-		Short: "gotosocial testrig-related tasks",
-	}
+	if testrig.Start != nil {
+		testrigCmd := &cobra.Command{
+			Use:   "testrig",
+			Short: "gotosocial testrig-related tasks",
+		}
 
-	testrigStartCmd := &cobra.Command{
-		Use:   "start",
-		Short: "start the gotosocial testrig server",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd.Context(), testrig.Start)
-		},
-	}
+		testrigStartCmd := &cobra.Command{
+			Use:   "start",
+			Short: "start the gotosocial testrig server",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return run(cmd.Context(), testrig.Start)
+			},
+		}
 
-	testrigCmd.AddCommand(testrigStartCmd)
-	return testrigCmd
+		testrigCmd.AddCommand(testrigStartCmd)
+		return testrigCmd
+	}
+	return nil
 }

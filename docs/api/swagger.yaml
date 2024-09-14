@@ -157,6 +157,14 @@ definitions:
                 description: The default posting content type for new statuses.
                 type: string
                 x-go-name: StatusContentType
+            web_visibility:
+                description: |-
+                    Visibility level(s) of posts to show for this account via the web api.
+                    "public" = default, show only Public visibility posts on the web.
+                    "unlisted" = show Public *and* Unlisted visibility posts on the web.
+                    "none" = show no posts on the web, not even Public ones.
+                type: string
+                x-go-name: WebVisibility
         title: Source represents display or publishing preferences of user's own account.
         type: object
         x-go-package: github.com/superseriousbusiness/gotosocial/internal/api/model
@@ -304,6 +312,15 @@ definitions:
                 x-go-name: Note
             role:
                 $ref: '#/definitions/accountRole'
+            roles:
+                description: |-
+                    Roles lists the public roles of the account on this instance.
+                    Unlike Role, this is always available, but never includes permissions details.
+                    Key/value omitted for remote accounts.
+                items:
+                    $ref: '#/definitions/accountDisplayRole'
+                type: array
+                x-go-name: Roles
             source:
                 $ref: '#/definitions/Source'
             statuses_count:
@@ -332,6 +349,79 @@ definitions:
         title: Account models a fediverse account.
         type: object
         x-go-name: Account
+        x-go-package: github.com/superseriousbusiness/gotosocial/internal/api/model
+    accountDisplayRole:
+        description: This is a subset of AccountRole.
+        properties:
+            color:
+                description: |-
+                    Color is a 6-digit CSS-style hex color code with leading `#`, or an empty string if this role has no color.
+                    Since GotoSocial doesn't use role colors, we leave this empty.
+                type: string
+                x-go-name: Color
+            id:
+                description: |-
+                    ID of the role.
+                    Not used by GotoSocial, but we set it to the role name, just in case a client expects a unique ID.
+                type: string
+                x-go-name: ID
+            name:
+                description: Name of the role.
+                type: string
+                x-go-name: Name
+        title: AccountDisplayRole models a public, displayable role of an account.
+        type: object
+        x-go-name: AccountDisplayRole
+        x-go-package: github.com/superseriousbusiness/gotosocial/internal/api/model
+    accountExportStats:
+        description: |-
+            AccountExportStats models an account's stats
+            specifically for the purpose of informing about
+            export sizes at the /api/v1/exports/stats endpoint.
+        properties:
+            blocks_count:
+                description: Number of accounts blocked by this account.
+                example: 15
+                format: int64
+                type: integer
+                x-go-name: BlocksCount
+            followers_count:
+                description: Number of accounts following this account.
+                example: 50
+                format: int64
+                type: integer
+                x-go-name: FollowersCount
+            following_count:
+                description: Number of accounts followed by this account.
+                example: 50
+                format: int64
+                type: integer
+                x-go-name: FollowingCount
+            lists_count:
+                description: Number of lists created by this account.
+                example: 10
+                format: int64
+                type: integer
+                x-go-name: ListsCount
+            media_storage:
+                description: 'TODO: String representation of media storage size attributed to this account.'
+                example: 500MB
+                type: string
+                x-go-name: MediaStorage
+            mutes_count:
+                description: Number of accounts muted by this account.
+                example: 11
+                format: int64
+                type: integer
+                x-go-name: MutesCount
+            statuses_count:
+                description: Number of statuses created by this account.
+                example: 81986
+                format: int64
+                type: integer
+                x-go-name: StatusesCount
+        type: object
+        x-go-name: AccountExportStats
         x-go-package: github.com/superseriousbusiness/gotosocial/internal/api/model
     accountRelationship:
         properties:
@@ -398,9 +488,32 @@ definitions:
         x-go-package: github.com/superseriousbusiness/gotosocial/internal/api/model
     accountRole:
         properties:
+            color:
+                description: |-
+                    Color is a 6-digit CSS-style hex color code with leading `#`, or an empty string if this role has no color.
+                    Since GotoSocial doesn't use role colors, we leave this empty.
+                type: string
+                x-go-name: Color
+            highlighted:
+                description: |-
+                    Highlighted indicates whether the role is publicly visible on the user profile.
+                    This is always true for GotoSocial's built-in admin and moderator roles, and false otherwise.
+                type: boolean
+                x-go-name: Highlighted
+            id:
+                description: |-
+                    ID of the role.
+                    Not used by GotoSocial, but we set it to the role name, just in case a client expects a unique ID.
+                type: string
+                x-go-name: ID
             name:
+                description: Name of the role.
                 type: string
                 x-go-name: Name
+            permissions:
+                description: Permissions is a bitmap serialized as a numeric string, indicating which admin/moderation actions a user can perform.
+                type: string
+                x-go-name: Permissions
         title: AccountRole models the role of an account.
         type: object
         x-go-name: AccountRole
@@ -1904,6 +2017,47 @@ definitions:
         type: string
         x-go-name: PolicyValue
         x-go-package: github.com/superseriousbusiness/gotosocial/internal/api/model
+    interactionRequest:
+        properties:
+            accepted_at:
+                description: The timestamp that the interaction request was accepted (ISO 8601 Datetime). Field omitted if request not accepted (yet).
+                type: string
+                x-go-name: AcceptedAt
+            account:
+                $ref: '#/definitions/account'
+            created_at:
+                description: The timestamp of the interaction request (ISO 8601 Datetime)
+                type: string
+                x-go-name: CreatedAt
+            id:
+                description: The id of the interaction request in the database.
+                type: string
+                x-go-name: ID
+            rejected_at:
+                description: The timestamp that the interaction request was rejected (ISO 8601 Datetime). Field omitted if request not rejected (yet).
+                type: string
+                x-go-name: RejectedAt
+            reply:
+                $ref: '#/definitions/status'
+            status:
+                $ref: '#/definitions/status'
+            type:
+                description: |-
+                    The type of interaction that this interaction request pertains to.
+
+                    `favourite` - Someone favourited a status.
+                    `reply` - Someone replied to a status.
+                    `reblog` - Someone reblogged / boosted a status.
+                type: string
+                x-go-name: Type
+            uri:
+                description: URI of the Accept or Reject. Only set if accepted_at or rejected_at is set, else omitted.
+                type: string
+                x-go-name: URI
+        title: InteractionRequest represents a pending, approved, or rejected interaction of type favourite, reply, or reblog.
+        type: object
+        x-go-name: InteractionRequest
+        x-go-package: github.com/superseriousbusiness/gotosocial/internal/api/model
     list:
         properties:
             exclusive:
@@ -2165,6 +2319,15 @@ definitions:
                 x-go-name: Note
             role:
                 $ref: '#/definitions/accountRole'
+            roles:
+                description: |-
+                    Roles lists the public roles of the account on this instance.
+                    Unlike Role, this is always available, but never includes permissions details.
+                    Key/value omitted for remote accounts.
+                items:
+                    $ref: '#/definitions/accountDisplayRole'
+                type: array
+                x-go-name: Roles
             source:
                 $ref: '#/definitions/Source'
             statuses_count:
@@ -2527,6 +2690,10 @@ definitions:
                 example: en
                 type: string
                 x-go-name: Language
+            local_only:
+                description: Set to "true" if status is not federated, ie., a "local only" status; omitted from response otherwise.
+                type: boolean
+                x-go-name: LocalOnly
             media_attachments:
                 description: Media that is attached to this status.
                 items:
@@ -2720,6 +2887,10 @@ definitions:
                 example: en
                 type: string
                 x-go-name: Language
+            local_only:
+                description: Set to "true" if status is not federated, ie., a "local only" status; omitted from response otherwise.
+                type: boolean
+                x-go-name: LocalOnly
             media_attachments:
                 description: Media that is attached to this status.
                 items:
@@ -4243,6 +4414,14 @@ paths:
                   in: formData
                   name: hide_collections
                   type: boolean
+                - description: |-
+                    Posts to show on the web view of the account.
+                    "public": default, show only Public visibility posts on the web.
+                    "unlisted": show Public *and* Unlisted visibility posts on the web.
+                    "none": show no posts on the web, not even Public ones.
+                  in: formData
+                  name: web_visibility
+                  type: string
                 - description: Name of 1st profile field to be added to this account's profile. (The index may be any string; add more indexes to send more fields.)
                   in: formData
                   name: fields_attributes[0][name]
@@ -6370,6 +6549,128 @@ paths:
             summary: Get an array of custom emojis available on the instance.
             tags:
                 - custom_emojis
+    /api/v1/exports/blocks.csv:
+        get:
+            operationId: exportBlocks
+            produces:
+                - text/csv
+            responses:
+                "200":
+                    description: CSV file of accounts that you block.
+                "401":
+                    description: unauthorized
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:blocks
+            summary: Export a CSV file of accounts that you block.
+            tags:
+                - import-export
+    /api/v1/exports/followers.csv:
+        get:
+            operationId: exportFollowers
+            produces:
+                - text/csv
+            responses:
+                "200":
+                    description: CSV file of accounts that follow you.
+                "401":
+                    description: unauthorized
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:follows
+            summary: Export a CSV file of accounts that follow you.
+            tags:
+                - import-export
+    /api/v1/exports/following.csv:
+        get:
+            operationId: exportFollowing
+            produces:
+                - text/csv
+            responses:
+                "200":
+                    description: CSV file of accounts that you follow.
+                "401":
+                    description: unauthorized
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:follows
+            summary: Export a CSV file of accounts that you follow.
+            tags:
+                - import-export
+    /api/v1/exports/lists.csv:
+        get:
+            operationId: exportLists
+            produces:
+                - text/csv
+            responses:
+                "200":
+                    description: CSV file of lists.
+                "401":
+                    description: unauthorized
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:lists
+            summary: Export a CSV file of lists created by you.
+            tags:
+                - import-export
+    /api/v1/exports/mutes.csv:
+        get:
+            operationId: exportMutes
+            produces:
+                - text/csv
+            responses:
+                "200":
+                    description: CSV file of accounts that you mute.
+                "401":
+                    description: unauthorized
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:mutes
+            summary: Export a CSV file of accounts that you mute.
+            tags:
+                - import-export
+    /api/v1/exports/stats:
+        get:
+            operationId: exportStats
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: Export stats for the requesting account.
+                    schema:
+                        $ref: '#/definitions/accountExportStats'
+                "401":
+                    description: unauthorized
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:account
+            summary: Returns informational stats on the number of items that can be exported for requesting account.
+            tags:
+                - import-export
     /api/v1/favourites:
         get:
             description: |-
@@ -6898,6 +7199,55 @@ paths:
             summary: Get an array of all hashtags that you currently follow.
             tags:
                 - tags
+    /api/v1/import:
+        post:
+            consumes:
+                - multipart/form-data
+            description: |-
+                This can be used to migrate data from a Mastodon-compatible CSV file to a GoToSocial account.
+
+                Uploaded data will be processed asynchronously, and not all entries may be processed depending
+                on domain blocks, user-level blocks, network availability of referenced accounts and statuses, etc.
+            operationId: importData
+            parameters:
+                - description: The CSV data file to upload.
+                  in: formData
+                  name: data
+                  required: true
+                  type: file
+                - description: |-
+                    Type of entries contained in the data file:
+                    - `following` - accounts to follow. - `blocks` - accounts to block.
+                  in: formData
+                  name: type
+                  required: true
+                  type: string
+                - default: merge
+                  description: |-
+                    Mode to use when creating entries from the data file:
+                    - `merge` to merge entries in file with existing entries. - `overwrite` to replace existing entries with entries in file.
+                  in: formData
+                  name: mode
+                  type: string
+            produces:
+                - application/json
+            responses:
+                "202":
+                    description: Upload accepted.
+                "400":
+                    description: bad request
+                "401":
+                    description: unauthorized
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - write:accounts
+            summary: Upload some CSV-formatted data to your account.
+            tags:
+                - import-export
     /api/v1/instance:
         get:
             operationId: instanceGetV1
@@ -7234,6 +7584,177 @@ paths:
             summary: Update default interaction policies per visibility level for new statuses created by you.
             tags:
                 - interaction_policies
+    /api/v1/interaction_requests:
+        get:
+            description: |-
+                ```
+                <https://example.org/api/v1/interaction_requests?limit=80&max_id=01FC0SKA48HNSVR6YKZCQGS2V8>; rel="next", <https://example.org/api/v1/interaction_requests?limit=80&min_id=01FC0SKW5JK2Q4EVAV2B462YY0>; rel="prev"
+                ````
+            operationId: getInteractionRequests
+            parameters:
+                - description: If set, then only interactions targeting the given status_id will be included in the results.
+                  in: query
+                  name: status_id
+                  type: string
+                - default: true
+                  description: If true or not set, pending favourites will be included in the results. At least one of favourites, replies, and reblogs must be true.
+                  in: query
+                  name: favourites
+                  type: boolean
+                - default: true
+                  description: If true or not set, pending replies will be included in the results. At least one of favourites, replies, and reblogs must be true.
+                  in: query
+                  name: replies
+                  type: boolean
+                - default: true
+                  description: If true or not set, pending reblogs will be included in the results. At least one of favourites, replies, and reblogs must be true.
+                  in: query
+                  name: reblogs
+                  type: boolean
+                - description: Return only interaction requests *OLDER* than the given max ID. The interaction with the specified ID will not be included in the response.
+                  in: query
+                  name: max_id
+                  type: string
+                - description: Return only interaction requests *NEWER* than the given since ID. The interaction with the specified ID will not be included in the response.
+                  in: query
+                  name: since_id
+                  type: string
+                - description: Return only interaction requests *IMMEDIATELY NEWER* than the given min ID. The interaction with the specified ID will not be included in the response.
+                  in: query
+                  name: min_id
+                  type: string
+                - default: 40
+                  description: Number of interaction requests to return.
+                  in: query
+                  maximum: 80
+                  minimum: 1
+                  name: limit
+                  type: integer
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: ""
+                    headers:
+                        Link:
+                            description: Links to the next and previous queries.
+                            type: string
+                    schema:
+                        items:
+                            $ref: '#/definitions/interactionRequest'
+                        type: array
+                "400":
+                    description: bad request
+                "401":
+                    description: unauthorized
+                "404":
+                    description: not found
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:notifications
+            summary: Get an array of interactions requested on your statuses by other accounts, and pending your approval.
+            tags:
+                - interaction_requests
+    /api/v1/interaction_requests/{id}:
+        get:
+            operationId: getInteractionRequest
+            parameters:
+                - description: ID of the interaction request targeting you.
+                  in: path
+                  name: id
+                  required: true
+                  type: string
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: Interaction request.
+                    schema:
+                        $ref: '#/definitions/interactionRequest'
+                "400":
+                    description: bad request
+                "401":
+                    description: unauthorized
+                "404":
+                    description: not found
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - read:notifications
+            summary: Get interaction request with the given ID.
+            tags:
+                - interaction_requests
+    /api/v1/interaction_requests/{id}/authorize:
+        post:
+            operationId: authorizeInteractionRequest
+            parameters:
+                - description: ID of the interaction request targeting you.
+                  in: path
+                  name: id
+                  required: true
+                  type: string
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: The now-approved interaction request.
+                    schema:
+                        $ref: '#/definitions/interactionRequest'
+                "400":
+                    description: bad request
+                "401":
+                    description: unauthorized
+                "404":
+                    description: not found
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - write:statuses
+            summary: Accept/authorize/approve an interaction request with the given ID.
+            tags:
+                - interaction_requests
+    /api/v1/interaction_requests/{id}/reject:
+        post:
+            operationId: rejectInteractionRequest
+            parameters:
+                - description: ID of the interaction request targeting you.
+                  in: path
+                  name: id
+                  required: true
+                  type: string
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: The now-rejected interaction request.
+                    schema:
+                        $ref: '#/definitions/interactionRequest'
+                "400":
+                    description: bad request
+                "401":
+                    description: unauthorized
+                "404":
+                    description: not found
+                "406":
+                    description: not acceptable
+                "500":
+                    description: internal server error
+            security:
+                - OAuth2 Bearer:
+                    - write:statuses
+            summary: Reject an interaction request with the given ID.
+            tags:
+                - interaction_requests
     /api/v1/lists:
         get:
             operationId: lists
@@ -8389,6 +8910,17 @@ paths:
                   name: visibility
                   type: string
                   x-go-name: Visibility
+                - default: false
+                  description: If set to true, this status will be "local only" and will NOT be federated beyond the local timeline(s). If set to false (default), this status will be federated to your followers beyond the local timeline(s).
+                  in: formData
+                  name: local_only
+                  type: boolean
+                  x-go-name: LocalOnly
+                - description: '***DEPRECATED***. Included for back compat only. Only used if set and local_only is not yet. If set to true, this status will be federated beyond the local timeline(s). If set to false, this status will NOT be federated beyond the local timeline(s).'
+                  in: formData
+                  name: federated
+                  type: boolean
+                  x-go-name: Federated
                 - description: |-
                     ISO 8601 Datetime at which to schedule a status.
                     Providing this parameter will cause ScheduledStatus to be returned instead of Status.
@@ -8412,11 +8944,6 @@ paths:
                   name: content_type
                   type: string
                   x-go-name: ContentType
-                - description: This status will be federated beyond the local timeline(s).
-                  in: formData
-                  name: federated
-                  type: boolean
-                  x-go-name: Federated
             produces:
                 - application/json
             responses:
@@ -9237,6 +9764,8 @@ paths:
                     description: unauthorized
                 "403":
                     description: forbidden
+                "404":
+                    description: unauthorized
                 "500":
                     description: internal server error
             security:
@@ -9969,6 +10498,16 @@ paths:
                   in: formData
                   name: expires_in
                   type: number
+                - description: |-
+                    The action to be taken when a status matches this filter.
+
+                    Sample: warn
+                  enum:
+                    - warn
+                    - hide
+                  in: formData
+                  name: filter_action
+                  type: string
             produces:
                 - application/json
             responses:

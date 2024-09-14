@@ -70,11 +70,9 @@ func (p *Processor) OutboxGet(
 	}
 
 	// Ensure we have stats for this account.
-	if receivingAcct.Stats == nil {
-		if err := p.state.DB.PopulateAccountStats(ctx, receivingAcct); err != nil {
-			err := gtserror.Newf("error getting stats for account %s: %w", receivingAcct.ID, err)
-			return nil, gtserror.NewErrorInternalError(err)
-		}
+	if err := p.state.DB.PopulateAccountStats(ctx, receivingAcct); err != nil {
+		err := gtserror.Newf("error getting stats for account %s: %w", receivingAcct.ID, err)
+		return nil, gtserror.NewErrorInternalError(err)
 	}
 
 	var obj vocab.Type
@@ -129,6 +127,18 @@ func (p *Processor) OutboxGet(
 			// ID values, used for paging.
 			lo = statuses[len(statuses)-1].ID
 			hi = statuses[0].ID
+		}
+
+		// Reslice statuses dropping all those invisible to requester
+		// (eg., local-only statuses, if the requester is remote).
+		statuses, err = p.visFilter.StatusesVisible(
+			ctx,
+			auth.requestingAcct,
+			statuses,
+		)
+		if err != nil {
+			err := gtserror.Newf("error filtering statuses: %w", err)
+			return nil, gtserror.NewErrorInternalError(err)
 		}
 
 		// Start building AS collection page params.
@@ -200,11 +210,9 @@ func (p *Processor) FollowersGet(
 	}
 
 	// Ensure we have stats for this account.
-	if receivingAcct.Stats == nil {
-		if err := p.state.DB.PopulateAccountStats(ctx, receivingAcct); err != nil {
-			err := gtserror.Newf("error getting stats for account %s: %w", receivingAcct.ID, err)
-			return nil, gtserror.NewErrorInternalError(err)
-		}
+	if err := p.state.DB.PopulateAccountStats(ctx, receivingAcct); err != nil {
+		err := gtserror.Newf("error getting stats for account %s: %w", receivingAcct.ID, err)
+		return nil, gtserror.NewErrorInternalError(err)
 	}
 
 	var obj vocab.Type
@@ -314,11 +322,9 @@ func (p *Processor) FollowingGet(ctx context.Context, requestedUser string, page
 	}
 
 	// Ensure we have stats for this account.
-	if receivingAcct.Stats == nil {
-		if err := p.state.DB.PopulateAccountStats(ctx, receivingAcct); err != nil {
-			err := gtserror.Newf("error getting stats for account %s: %w", receivingAcct.ID, err)
-			return nil, gtserror.NewErrorInternalError(err)
-		}
+	if err := p.state.DB.PopulateAccountStats(ctx, receivingAcct); err != nil {
+		err := gtserror.Newf("error getting stats for account %s: %w", receivingAcct.ID, err)
+		return nil, gtserror.NewErrorInternalError(err)
 	}
 
 	var obj vocab.Type

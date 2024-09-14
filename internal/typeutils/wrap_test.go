@@ -76,7 +76,13 @@ func (suite *WrapTestSuite) TestWrapNoteInCreate() {
 	suite.NoError(err)
 
 	suite.Equal(`{
-  "@context": "https://www.w3.org/ns/activitystreams",
+  "@context": [
+    "https://gotosocial.org/ns",
+    "https://www.w3.org/ns/activitystreams",
+    {
+      "sensitive": "as:sensitive"
+    }
+  ],
   "actor": "http://localhost:8080/users/the_mighty_zork",
   "cc": "http://localhost:8080/users/the_mighty_zork/followers",
   "id": "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY/activity#Create",
@@ -89,6 +95,26 @@ func (suite *WrapTestSuite) TestWrapNoteInCreate() {
       "en": "hello everyone!"
     },
     "id": "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
+    "interactionPolicy": {
+      "canAnnounce": {
+        "always": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "approvalRequired": []
+      },
+      "canLike": {
+        "always": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "approvalRequired": []
+      },
+      "canReply": {
+        "always": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ],
+        "approvalRequired": []
+      }
+    },
     "published": "2021-10-20T12:40:37+02:00",
     "replies": {
       "first": {

@@ -172,7 +172,7 @@ func (d *Dereferencer) RefreshMedia(
 
 			// Recache media with prepared info,
 			// this will also update media in db.
-			return d.mediaManager.RecacheMedia(
+			return d.mediaManager.CacheMedia(
 				attach,
 				func(ctx context.Context) (io.ReadCloser, error) {
 					return tsport.DereferenceMedia(ctx, url, int64(maxsz))
@@ -243,6 +243,9 @@ func (d *Dereferencer) processMediaSafeley(
 		if err != nil {
 			return nil, err
 		}
+
+		// Add processing media to hash map.
+		d.derefMedia[remoteURL] = processing
 
 		defer func() {
 			// Remove on finish.

@@ -64,6 +64,5 @@ func (p *Processor) Follow(
 		)
 	}
 
-	tag.Following = util.Ptr(true)
-	return p.apiTag(ctx, tag)
+	return p.apiTag(ctx, tag, true)
 }

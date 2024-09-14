@@ -28,14 +28,17 @@ import (
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/bookmarks"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/conversations"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/customemojis"
+	"github.com/superseriousbusiness/gotosocial/internal/api/client/exports"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/favourites"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/featuredtags"
 	filtersV1 "github.com/superseriousbusiness/gotosocial/internal/api/client/filters/v1"
 	filtersV2 "github.com/superseriousbusiness/gotosocial/internal/api/client/filters/v2"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/followedtags"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/followrequests"
+	importdata "github.com/superseriousbusiness/gotosocial/internal/api/client/import"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/instance"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/interactionpolicies"
+	"github.com/superseriousbusiness/gotosocial/internal/api/client/interactionrequests"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/lists"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/markers"
 	"github.com/superseriousbusiness/gotosocial/internal/api/client/media"
@@ -68,14 +71,17 @@ type Client struct {
 	bookmarks           *bookmarks.Module           // api/v1/bookmarks
 	conversations       *conversations.Module       // api/v1/conversations
 	customEmojis        *customemojis.Module        // api/v1/custom_emojis
+	exports             *exports.Module             // api/v1/exports
 	favourites          *favourites.Module          // api/v1/favourites
 	featuredTags        *featuredtags.Module        // api/v1/featured_tags
 	filtersV1           *filtersV1.Module           // api/v1/filters
 	filtersV2           *filtersV2.Module           // api/v2/filters
 	followRequests      *followrequests.Module      // api/v1/follow_requests
 	followedTags        *followedtags.Module        // api/v1/followed_tags
+	importData          *importdata.Module          // api/v1/import
 	instance            *instance.Module            // api/v1/instance
 	interactionPolicies *interactionpolicies.Module // api/v1/interaction_policies
+	interactionRequests *interactionrequests.Module // api/v1/interaction_requests
 	lists               *lists.Module               // api/v1/lists
 	markers             *markers.Module             // api/v1/markers
 	media               *media.Module               // api/v1/media, api/v2/media
@@ -116,14 +122,17 @@ func (c *Client) Route(r *router.Router, m ...gin.HandlerFunc) {
 	c.bookmarks.Route(h)
 	c.conversations.Route(h)
 	c.customEmojis.Route(h)
+	c.exports.Route(h)
 	c.favourites.Route(h)
 	c.featuredTags.Route(h)
 	c.filtersV1.Route(h)
 	c.filtersV2.Route(h)
 	c.followRequests.Route(h)
 	c.followedTags.Route(h)
+	c.importData.Route(h)
 	c.instance.Route(h)
 	c.interactionPolicies.Route(h)
+	c.interactionRequests.Route(h)
 	c.lists.Route(h)
 	c.markers.Route(h)
 	c.media.Route(h)
@@ -152,14 +161,17 @@ func NewClient(state *state.State, p *processing.Processor) *Client {
 		bookmarks:           bookmarks.New(p),
 		conversations:       conversations.New(p),
 		customEmojis:        customemojis.New(p),
+		exports:             exports.New(p),
 		favourites:          favourites.New(p),
 		featuredTags:        featuredtags.New(p),
 		filtersV1:           filtersV1.New(p),
 		filtersV2:           filtersV2.New(p),
 		followRequests:      followrequests.New(p),
 		followedTags:        followedtags.New(p),
+		importData:          importdata.New(p),
 		instance:            instance.New(p),
 		interactionPolicies: interactionpolicies.New(p),
+		interactionRequests: interactionrequests.New(p),
 		lists:               lists.New(p),
 		markers:             markers.New(p),
 		media:               media.New(p),

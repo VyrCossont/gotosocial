@@ -72,11 +72,11 @@ func (s *vfsShm) Close() error {
 		return nil
 	}
 
-	// Unlock everything.
-	s.shmLock(0, _SHM_NLOCK, _SHM_UNLOCK)
-
 	vfsShmFilesMtx.Lock()
 	defer vfsShmFilesMtx.Unlock()
+
+	// Unlock everything.
+	s.shmLock(0, _SHM_NLOCK, _SHM_UNLOCK)
 
 	// Decrease reference count.
 	if s.vfsShmFile.refs > 1 {
@@ -84,16 +84,16 @@ func (s *vfsShm) Close() error {
 		s.vfsShmFile = nil
 		return nil
 	}
+
+	err := s.File.Close()
 	for i, g := range vfsShmFiles {
 		if g == s.vfsShmFile {
 			vfsShmFiles[i] = nil
-			break
+			s.vfsShmFile = nil
+			return err
 		}
 	}
-
-	err := s.File.Close()
-	s.vfsShmFile = nil
-	return err
+	panic(util.AssertErr())
 }
 
 func (s *vfsShm) shmOpen() (rc _ErrorCode) {
@@ -121,8 +121,8 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 	// Find a shared file, increase the reference count.
 	for _, g := range vfsShmFiles {
 		if g != nil && os.SameFile(fi, g.info) {
-			g.refs++
 			s.vfsShmFile = g
+			g.refs++
 			return _OK
 		}
 	}
@@ -207,15 +207,22 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 	case flags&_SHM_UNLOCK != 0:
 		for i := offset; i < offset+n; i++ {
 			if s.lock[i] {
+				if s.vfsShmFile.lock[i] == 0 {
+					panic(util.AssertErr())
+				}
 				if s.vfsShmFile.lock[i] <= 0 {
 					s.vfsShmFile.lock[i] = 0
 				} else {
 					s.vfsShmFile.lock[i]--
 				}
+				s.lock[i] = false
 			}
 		}
 	case flags&_SHM_SHARED != 0:
 		for i := offset; i < offset+n; i++ {
+			if s.lock[i] {
+				panic(util.AssertErr())
+			}
 			if s.vfsShmFile.lock[i] < 0 {
 				return _BUSY
 			}
@@ -226,6 +233,9 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 		}
 	case flags&_SHM_EXCLUSIVE != 0:
 		for i := offset; i < offset+n; i++ {
+			if s.lock[i] {
+				panic(util.AssertErr())
+			}
 			if s.vfsShmFile.lock[i] != 0 {
 				return _BUSY
 			}
@@ -234,6 +244,8 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 			s.vfsShmFile.lock[i] = -1
 			s.lock[i] = true
 		}
+	default:
+		panic(util.AssertErr())
 	}
 
 	return _OK
@@ -256,5 +268,4 @@ func (s *vfsShm) shmUnmap(delete bool) {
 		os.Remove(s.path)
 	}
 	s.Close()
-	s.vfsShmFile = nil
 }

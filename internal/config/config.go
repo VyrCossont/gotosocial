@@ -60,19 +60,20 @@ type Configuration struct {
 	TrustedProxies     []string `name:"trusted-proxies" usage:"Proxies to trust when parsing x-forwarded headers into real IPs."`
 	SoftwareVersion    string   `name:"software-version" usage:""`
 
-	DbType                   string        `name:"db-type" usage:"Database type: eg., postgres"`
-	DbAddress                string        `name:"db-address" usage:"Database ipv4 address, hostname, or filename"`
-	DbPort                   int           `name:"db-port" usage:"Database port"`
-	DbUser                   string        `name:"db-user" usage:"Database username"`
-	DbPassword               string        `name:"db-password" usage:"Database password"`
-	DbDatabase               string        `name:"db-database" usage:"Database name"`
-	DbTLSMode                string        `name:"db-tls-mode" usage:"Database tls mode"`
-	DbTLSCACert              string        `name:"db-tls-ca-cert" usage:"Path to CA cert for db tls connection"`
-	DbMaxOpenConnsMultiplier int           `name:"db-max-open-conns-multiplier" usage:"Multiplier to use per cpu for max open database connections. 0 or less is normalized to 1."`
-	DbSqliteJournalMode      string        `name:"db-sqlite-journal-mode" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_journal_mode"`
-	DbSqliteSynchronous      string        `name:"db-sqlite-synchronous" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_synchronous"`
-	DbSqliteCacheSize        bytesize.Size `name:"db-sqlite-cache-size" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_cache_size"`
-	DbSqliteBusyTimeout      time.Duration `name:"db-sqlite-busy-timeout" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_busy_timeout"`
+	DbType                     string        `name:"db-type" usage:"Database type: eg., postgres"`
+	DbAddress                  string        `name:"db-address" usage:"Database ipv4 address, hostname, or filename"`
+	DbPort                     int           `name:"db-port" usage:"Database port"`
+	DbUser                     string        `name:"db-user" usage:"Database username"`
+	DbPassword                 string        `name:"db-password" usage:"Database password"`
+	DbDatabase                 string        `name:"db-database" usage:"Database name"`
+	DbTLSMode                  string        `name:"db-tls-mode" usage:"Database tls mode"`
+	DbTLSCACert                string        `name:"db-tls-ca-cert" usage:"Path to CA cert for db tls connection"`
+	DbMaxOpenConnsMultiplier   int           `name:"db-max-open-conns-multiplier" usage:"Multiplier to use per cpu for max open database connections. 0 or less is normalized to 1."`
+	DbSqliteJournalMode        string        `name:"db-sqlite-journal-mode" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_journal_mode"`
+	DbSqliteSynchronous        string        `name:"db-sqlite-synchronous" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_synchronous"`
+	DbSqliteCacheSize          bytesize.Size `name:"db-sqlite-cache-size" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_cache_size"`
+	DbSqliteBusyTimeout        time.Duration `name:"db-sqlite-busy-timeout" usage:"Sqlite only: see https://www.sqlite.org/pragma.html#pragma_busy_timeout"`
+	DbPostgresConnectionString string        `name:"db-postgres-connection-string" usage:"Full Database URL for connection to postgres"`
 
 	WebTemplateBaseDir string `name:"web-template-base-dir" usage:"Basedir for html templating files for rendering pages and composing emails."`
 	WebAssetBaseDir    string `name:"web-asset-base-dir" usage:"Directory to serve static assets from, accessible at example.org/assets/"`
@@ -101,6 +102,7 @@ type Configuration struct {
 	MediaRemoteMaxSize       bytesize.Size `name:"media-remote-max-size" usage:"Max size in bytes of media to download from other instances"`
 	MediaCleanupFrom         string        `name:"media-cleanup-from" usage:"Time of day from which to start running media cleanup/prune jobs. Should be in the format 'hh:mm:ss', eg., '15:04:05'."`
 	MediaCleanupEvery        time.Duration `name:"media-cleanup-every" usage:"Period to elapse between cleanups, starting from media-cleanup-at."`
+	MediaFfmpegPoolSize      int           `name:"media-ffmpeg-pool-size" usage:"Number of instances of the embedded ffmpeg WASM binary to add to the media processing pool. 0 or less uses GOMAXPROCS."`
 
 	StorageBackend       string `name:"storage-backend" usage:"Storage backend to use for media attachments"`
 	StorageLocalBasePath string `name:"storage-local-base-path" usage:"Full path to an already-created directory where gts should store/retrieve media files. Subfolders will be created within this dir."`
@@ -110,6 +112,7 @@ type Configuration struct {
 	StorageS3UseSSL      bool   `name:"storage-s3-use-ssl" usage:"Use SSL for S3 connections. Only set this to 'false' when testing locally"`
 	StorageS3BucketName  string `name:"storage-s3-bucket" usage:"Place blobs in this bucket"`
 	StorageS3Proxy       bool   `name:"storage-s3-proxy" usage:"Proxy S3 contents through GoToSocial instead of redirecting to a presigned URL"`
+	StorageS3RedirectURL string `name:"storage-s3-redirect-url" usage:"Custom URL to use for redirecting S3 media links. If set, this will be used instead of the S3 bucket URL."`
 
 	StatusesMaxChars           int `name:"statuses-max-chars" usage:"Max permitted characters for posted statuses, including content warning"`
 	StatusesPollMaxOptions     int `name:"statuses-poll-max-options" usage:"Max amount of options permitted on a poll"`
@@ -215,7 +218,7 @@ type CacheConfiguration struct {
 	FollowRequestIDsMemRatio          float64       `name:"follow-request-ids-mem-ratio"`
 	InReplyToIDsMemRatio              float64       `name:"in-reply-to-ids-mem-ratio"`
 	InstanceMemRatio                  float64       `name:"instance-mem-ratio"`
-	InteractionApprovalMemRatio       float64       `name:"interaction-approval-mem-ratio"`
+	InteractionRequestMemRatio        float64       `name:"interaction-request-mem-ratio"`
 	ListMemRatio                      float64       `name:"list-mem-ratio"`
 	ListEntryMemRatio                 float64       `name:"list-entry-mem-ratio"`
 	MarkerMemRatio                    float64       `name:"marker-mem-ratio"`
@@ -227,6 +230,7 @@ type CacheConfiguration struct {
 	PollVoteMemRatio                  float64       `name:"poll-vote-mem-ratio"`
 	PollVoteIDsMemRatio               float64       `name:"poll-vote-ids-mem-ratio"`
 	ReportMemRatio                    float64       `name:"report-mem-ratio"`
+	SinBinStatusMemRatio              float64       `name:"sin-bin-status-mem-ratio"`
 	StatusMemRatio                    float64       `name:"status-mem-ratio"`
 	StatusBookmarkMemRatio            float64       `name:"status-bookmark-mem-ratio"`
 	StatusBookmarkIDsMemRatio         float64       `name:"status-bookmark-ids-mem-ratio"`

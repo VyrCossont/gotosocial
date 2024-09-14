@@ -18,6 +18,7 @@
 package util
 
 import (
+	"net/url"
 	"strings"
 
 	"golang.org/x/net/idna"
@@ -41,4 +42,56 @@ func Punify(domain string) (string, error) {
 func DePunify(domain string) (string, error) {
 	out, err := idna.ToUnicode(domain)
 	return strings.ToLower(out), err
+}
+
+// URIMatches returns true if the expected URI matches
+// any of the given URIs, taking account of punycode.
+func URIMatches(expect *url.URL, uris ...*url.URL) (bool, error) {
+	// Normalize expect to punycode.
+	expectStr, err := PunifyURIToStr(expect)
+	if err != nil {
+		return false, err
+	}
+
+	for _, uri := range uris {
+		uriStr, err := PunifyURIToStr(uri)
+		if err != nil {
+			return false, err
+		}
+
+		if uriStr == expectStr {
+			// Looks good.
+			return true, nil
+		}
+	}
+
+	// Didn't match.
+	return false, nil
+}
+
+// PunifyURI returns a copy of the given URI
+// with the 'host' part converted to punycode.
+func PunifyURI(in *url.URL) (*url.URL, error) {
+	punyHost, err := Punify(in.Host)
+	if err != nil {
+		return nil, err
+	}
+	out := new(url.URL)
+	*out = *in
+	out.Host = punyHost
+	return out, nil
+}
+
+// PunifyURIToStr returns given URI serialized
+// with the 'host' part converted to punycode.
+func PunifyURIToStr(in *url.URL) (string, error) {
+	punyHost, err := Punify(in.Host)
+	if err != nil {
+		return "", err
+	}
+	oldHost := in.Host
+	in.Host = punyHost
+	str := in.String()
+	in.Host = oldHost
+	return str, nil
 }

@@ -77,13 +77,25 @@ func (r *relationshipDB) GetMute(
 	)
 }
 
+func (r *relationshipDB) CountAccountMutes(ctx context.Context, accountID string) (int, error) {
+	muteIDs, err := r.getAccountMuteIDs(ctx, accountID, nil)
+	return len(muteIDs), err
+}
+
 func (r *relationshipDB) getMutesByIDs(ctx context.Context, ids []string) ([]*gtsmodel.UserMute, error) {
 	// Load all mutes IDs via cache loader callbacks.
 	mutes, err := r.state.Caches.DB.UserMute.LoadIDs("ID",
 		ids,
 		func(uncached []string) ([]*gtsmodel.UserMute, error) {
+			// Avoid querying
+			// if none uncached.
+			count := len(uncached)
+			if count == 0 {
+				return nil, nil
+			}
+
 			// Preallocate expected length of uncached mutes.
-			mutes := make([]*gtsmodel.UserMute, 0, len(uncached))
+			mutes := make([]*gtsmodel.UserMute, 0, count)
 
 			// Perform database query scanning
 			// the remaining (uncached) IDs.
@@ -235,6 +247,12 @@ func (r *relationshipDB) DeleteAccountMutes(ctx context.Context, accountID strin
 		).
 		Scan(ctx, &muteIDs); err != nil {
 		return err
+	}
+
+	if len(muteIDs) == 0 {
+		// Nothing
+		// to delete.
+		return nil
 	}
 
 	defer func() {

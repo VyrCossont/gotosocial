@@ -68,6 +68,7 @@ type Status struct {
 	Federated                *bool              `bun:",notnull"`                                                    // This status will be federated beyond the local timeline(s)
 	InteractionPolicy        *InteractionPolicy `bun:""`                                                            // InteractionPolicy for this status. If null then the default InteractionPolicy should be assumed for this status's Visibility. Always null for boost wrappers.
 	PendingApproval          *bool              `bun:",nullzero,notnull,default:false"`                             // If true then status is a reply or boost wrapper that must be Approved by the reply-ee or boost-ee before being fully distributed.
+	PreApproved              bool               `bun:"-"`                                                           // If true, then status is a reply to or boost wrapper of a status on our instance, has permission to do the interaction, and an Accept should be sent out for it immediately. Field not stored in the DB.
 	ApprovedByURI            string             `bun:",nullzero"`                                                   // URI of an Accept Activity that approves the Announce or Create Activity that this status was/will be attached to.
 }
 
@@ -183,6 +184,35 @@ func (s *Status) GetMentionByTargetURI(uri string) (*Mention, bool) {
 	return nil, false
 }
 
+// GetMentionByUsernameDomain fetches the Mention associated with given
+// username and domains, typically extracted from a mention Namestring.
+func (s *Status) GetMentionByUsernameDomain(username, domain string) (*Mention, bool) {
+	for _, mention := range s.Mentions {
+
+		// We can only check if target
+		// account is set on the mention.
+		account := mention.TargetAccount
+		if account == nil {
+			continue
+		}
+
+		// Usernames must always match.
+		if account.Username != username {
+			continue
+		}
+
+		// Finally, either domains must
+		// match or an empty domain may
+		// be permitted if account local.
+		if account.Domain == domain ||
+			(domain == "" && account.IsLocal()) {
+			return mention, true
+		}
+	}
+
+	return nil, false
+}
+
 // GetTagByName searches status for Tag{} with name.
 func (s *Status) GetTagByName(name string) (*Tag, bool) {
 	for _, tag := range s.Tags {
@@ -211,6 +241,12 @@ func (s *Status) IsLocal() bool {
 	return s.Local != nil && *s.Local
 }
 
+// IsLocalOnly returns true if this status
+// is "local-only" ie., unfederated.
+func (s *Status) IsLocalOnly() bool {
+	return s.Federated == nil || !*s.Federated
+}
+
 // StatusToTag is an intermediate struct to facilitate the many2many relationship between a status and one or more tags.
 type StatusToTag struct {
 	StatusID string  `bun:"type:CHAR(26),unique:statustag,nullzero,notnull"`
@@ -231,6 +267,9 @@ type StatusToEmoji struct {
 type Visibility string
 
 const (
+	// VisibilityNone means nobody can see this.
+	// It's only used for web status visibility.
+	VisibilityNone Visibility = "none"
 	// VisibilityPublic means this status will be visible to everyone on all timelines.
 	VisibilityPublic Visibility = "public"
 	// VisibilityUnlocked means this status will be visible to everyone, but will only show on home timeline to followers, and in lists.

@@ -39,3 +39,12 @@ type FollowedTag struct {
 	// ID of the tag.
 	TagID string `bun:"type:CHAR(26),pk,nullzero"`
 }
+
+// FollowedTag represents a user following a tag.
+type FollowedTag struct {
+	// ID of the account that follows the tag.
+	AccountID string `bun:"type:CHAR(26),pk,nullzero"`
+
+	// ID of the tag.
+	TagID string `bun:"type:CHAR(26),pk,nullzero"`
+}

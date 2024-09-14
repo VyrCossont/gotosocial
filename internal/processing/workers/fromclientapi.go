@@ -20,18 +20,23 @@ package workers
 import (
 	"context"
 	"errors"
+	"time"
 
 	"codeberg.org/gruf/go-kv"
 	"codeberg.org/gruf/go-logger/v2/level"
 	"github.com/superseriousbusiness/gotosocial/internal/ap"
 	"github.com/superseriousbusiness/gotosocial/internal/db"
+	"github.com/superseriousbusiness/gotosocial/internal/gtscontext"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
+	"github.com/superseriousbusiness/gotosocial/internal/id"
 	"github.com/superseriousbusiness/gotosocial/internal/log"
 	"github.com/superseriousbusiness/gotosocial/internal/messages"
 	"github.com/superseriousbusiness/gotosocial/internal/processing/account"
+	"github.com/superseriousbusiness/gotosocial/internal/processing/common"
 	"github.com/superseriousbusiness/gotosocial/internal/state"
 	"github.com/superseriousbusiness/gotosocial/internal/typeutils"
+	"github.com/superseriousbusiness/gotosocial/internal/uris"
 	"github.com/superseriousbusiness/gotosocial/internal/util"
 )
 
@@ -44,6 +49,7 @@ type clientAPI struct {
 	surface   *Surface
 	federate  *federate
 	account   *account.Processor
+	common    *common.Processor
 	utils     *utils
 }
 
@@ -135,6 +141,18 @@ func (p *Processor) ProcessFromClientAPI(ctx context.Context, cMsg *messages.Fro
 		// ACCEPT USER (ie., new user+account sign-up)
 		case ap.ObjectProfile:
 			return p.clientAPI.AcceptUser(ctx, cMsg)
+
+		// ACCEPT NOTE/STATUS (ie., accept a reply)
+		case ap.ObjectNote:
+			return p.clientAPI.AcceptReply(ctx, cMsg)
+
+		// ACCEPT LIKE
+		case ap.ActivityLike:
+			return p.clientAPI.AcceptLike(ctx, cMsg)
+
+		// ACCEPT BOOST
+		case ap.ActivityAnnounce:
+			return p.clientAPI.AcceptAnnounce(ctx, cMsg)
 		}
 
 	// REJECT SOMETHING
@@ -148,6 +166,18 @@ func (p *Processor) ProcessFromClientAPI(ctx context.Context, cMsg *messages.Fro
 		// REJECT USER (ie., new user+account sign-up)
 		case ap.ObjectProfile:
 			return p.clientAPI.RejectUser(ctx, cMsg)
+
+		// REJECT NOTE/STATUS (ie., reject a reply)
+		case ap.ObjectNote:
+			return p.clientAPI.RejectReply(ctx, cMsg)
+
+		// REJECT LIKE
+		case ap.ActivityLike:
+			return p.clientAPI.RejectLike(ctx, cMsg)
+
+		// REJECT BOOST
+		case ap.ActivityAnnounce:
+			return p.clientAPI.RejectAnnounce(ctx, cMsg)
 		}
 
 	// UNDO SOMETHING
@@ -236,6 +266,80 @@ func (p *clientAPI) CreateStatus(ctx context.Context, cMsg *messages.FromClientA
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", cMsg.GTSModel)
 	}
 
+	// If pending approval is true then status must
+	// reply to a status (either one of ours or a
+	// remote) that requires approval for the reply.
+	pendingApproval := util.PtrOrZero(status.PendingApproval)
+
+	switch {
+	case pendingApproval && !status.PreApproved:
+		// If approval is required and status isn't
+		// preapproved, then send out the Create to
+		// only the replied-to account (if it's remote),
+		// and/or notify the account that's being
+		// interacted with (if it's local): they can
+		// approve or deny the interaction later.
+		if err := p.utils.requestReply(ctx, status); err != nil {
+			return gtserror.Newf("error pending reply: %w", err)
+		}
+
+		// Send Create to *remote* account inbox ONLY.
+		if err := p.federate.CreateStatus(ctx, status); err != nil {
+			return gtserror.Newf("error federating pending reply: %w", err)
+		}
+
+		// Return early.
+		return nil
+
+	case pendingApproval && status.PreApproved:
+		// If approval is required and status is
+		// preapproved, that means this is a reply
+		// to one of our statuses with permission
+		// that matched on a following/followers
+		// collection. Do the Accept immediately and
+		// then process everything else as normal,
+		// sending out the Create with the approval
+		// URI attached.
+
+		// Store an already-accepted interaction request.
+		id := id.NewULID()
+		approval := &gtsmodel.InteractionRequest{
+			ID:                   id,
+			StatusID:             status.InReplyToID,
+			TargetAccountID:      status.InReplyToAccountID,
+			TargetAccount:        status.InReplyToAccount,
+			InteractingAccountID: status.AccountID,
+			InteractingAccount:   status.Account,
+			InteractionURI:       status.URI,
+			InteractionType:      gtsmodel.InteractionLike,
+			Reply:                status,
+			URI:                  uris.GenerateURIForAccept(status.InReplyToAccount.Username, id),
+			AcceptedAt:           time.Now(),
+		}
+		if err := p.state.DB.PutInteractionRequest(ctx, approval); err != nil {
+			return gtserror.Newf("db error putting pre-approved interaction request: %w", err)
+		}
+
+		// Mark the status as now approved.
+		status.PendingApproval = util.Ptr(false)
+		status.PreApproved = false
+		status.ApprovedByURI = approval.URI
+		if err := p.state.DB.UpdateStatus(
+			ctx,
+			status,
+			"pending_approval",
+			"approved_by_uri",
+		); err != nil {
+			return gtserror.Newf("db error updating status: %w", err)
+		}
+
+		if err := p.federate.AcceptInteraction(ctx, approval); err != nil {
+			return gtserror.Newf("error federating pre-approval of reply: %w", err)
+		}
+
+		// Don't return, just continue as normal.
+	}
+
 	// Update stats for the actor account.
 	if err := p.utils.incrementStatusesCount(ctx, cMsg.Origin, status); err != nil {
 		log.Errorf(ctx, "error updating account stats: %v", err)
@@ -245,14 +349,14 @@ func (p *clientAPI) CreateStatus(ctx context.Context, cMsg *messages.FromClientA
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
+	if err := p.federate.CreateStatus(ctx, status); err != nil {
+		log.Errorf(ctx, "error federating status: %v", err)
+	}
+
 	if status.InReplyToID != "" {
 		// Interaction counts changed on the replied status;
 		// uncache the prepared version from all timelines.
 		p.surface.invalidateStatusFromTimelines(ctx, status.InReplyToID)
-	}
-
-	if err := p.federate.CreateStatus(ctx, status); err != nil {
-		log.Errorf(ctx, "error federating status: %v", err)
 	}
 
 	return nil
@@ -280,9 +384,6 @@ func (p *clientAPI) CreatePollVote(ctx context.Context, cMsg *messages.FromClien
 	status := vote.Poll.Status
 	status.Poll = vote.Poll
 
-	// Interaction counts changed on the source status, uncache from timelines.
-	p.surface.invalidateStatusFromTimelines(ctx, vote.Poll.StatusID)
-
 	if *status.Local {
 		// These are poll votes in a local status, we only need to
 		// federate the updated status model with latest vote counts.
@@ -295,6 +396,9 @@ func (p *clientAPI) CreatePollVote(ctx context.Context, cMsg *messages.FromClien
 			log.Errorf(ctx, "error federating poll vote: %v", err)
 		}
 	}
+
+	// Interaction counts changed on the source status, uncache from timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, vote.Poll.StatusID)
 
 	return nil
 }
@@ -362,17 +466,91 @@ func (p *clientAPI) CreateLike(ctx context.Context, cMsg *messages.FromClientAPI
 		return gtserror.Newf("error populating status fave: %w", err)
 	}
 
+	// If pending approval is true then fave must
+	// target a status (either one of ours or a
+	// remote) that requires approval for the fave.
+	pendingApproval := util.PtrOrZero(fave.PendingApproval)
+
+	switch {
+	case pendingApproval && !fave.PreApproved:
+		// If approval is required and fave isn't
+		// preapproved, then send out the Like to
+		// only the faved account (if it's remote),
+		// and/or notify the account that's being
+		// interacted with (if it's local): they can
+		// approve or deny the interaction later.
+		if err := p.utils.requestFave(ctx, fave); err != nil {
+			return gtserror.Newf("error pending fave: %w", err)
+		}
+
+		// Send Like to *remote* account inbox ONLY.
+		if err := p.federate.Like(ctx, fave); err != nil {
+			return gtserror.Newf("error federating pending Like: %v", err)
+		}
+
+		// Return early.
+		return nil
+
+	case pendingApproval && fave.PreApproved:
+		// If approval is required and fave is
+		// preapproved, that means this is a fave
+		// of one of our statuses with permission
+		// that matched on a following/followers
+		// collection. Do the Accept immediately and
+		// then process everything else as normal,
+		// sending out the Like with the approval
+		// URI attached.
+
+		// Store an already-accepted interaction request.
+		id := id.NewULID()
+		approval := &gtsmodel.InteractionRequest{
+			ID:                   id,
+			StatusID:             fave.StatusID,
+			TargetAccountID:      fave.TargetAccountID,
+			TargetAccount:        fave.TargetAccount,
+			InteractingAccountID: fave.AccountID,
+			InteractingAccount:   fave.Account,
+			InteractionURI:       fave.URI,
+			InteractionType:      gtsmodel.InteractionLike,
+			Like:                 fave,
+			URI:                  uris.GenerateURIForAccept(fave.TargetAccount.Username, id),
+			AcceptedAt:           time.Now(),
+		}
+		if err := p.state.DB.PutInteractionRequest(ctx, approval); err != nil {
+			return gtserror.Newf("db error putting pre-approved interaction request: %w", err)
+		}
+
+		// Mark the fave itself as now approved.
+		fave.PendingApproval = util.Ptr(false)
+		fave.PreApproved = false
+		fave.ApprovedByURI = approval.URI
+		if err := p.state.DB.UpdateStatusFave(
+			ctx,
+			fave,
+			"pending_approval",
+			"approved_by_uri",
+		); err != nil {
+			return gtserror.Newf("db error updating status fave: %w", err)
+		}
+
+		if err := p.federate.AcceptInteraction(ctx, approval); err != nil {
+			return gtserror.Newf("error federating pre-approval of fave: %w", err)
+		}
+
+		// Don't return, just continue as normal.
+	}
+
 	if err := p.surface.notifyFave(ctx, fave); err != nil {
 		log.Errorf(ctx, "error notifying fave: %v", err)
+	}
+
+	if err := p.federate.Like(ctx, fave); err != nil {
+		log.Errorf(ctx, "error federating like: %v", err)
 	}
 
 	// Interaction counts changed on the faved status;
 	// uncache the prepared version from all timelines.
 	p.surface.invalidateStatusFromTimelines(ctx, fave.StatusID)
-
-	if err := p.federate.Like(ctx, fave); err != nil {
-		log.Errorf(ctx, "error federating like: %v", err)
-	}
 
 	return nil
 }
@@ -381,6 +559,80 @@ func (p *clientAPI) CreateAnnounce(ctx context.Context, cMsg *messages.FromClien
 	boost, ok := cMsg.GTSModel.(*gtsmodel.Status)
 	if !ok {
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", cMsg.GTSModel)
+	}
+
+	// If pending approval is true then status must
+	// boost a status (either one of ours or a
+	// remote) that requires approval for the boost.
+	pendingApproval := util.PtrOrZero(boost.PendingApproval)
+
+	switch {
+	case pendingApproval && !boost.PreApproved:
+		// If approval is required and boost isn't
+		// preapproved, then send out the Announce to
+		// only the boosted account (if it's remote),
+		// and/or notify the account that's being
+		// interacted with (if it's local): they can
+		// approve or deny the interaction later.
+		if err := p.utils.requestAnnounce(ctx, boost); err != nil {
+			return gtserror.Newf("error pending boost: %w", err)
+		}
+
+		// Send Announce to *remote* account inbox ONLY.
+		if err := p.federate.Announce(ctx, boost); err != nil {
+			return gtserror.Newf("error federating pending Announce: %v", err)
+		}
+
+		// Return early.
+		return nil
+
+	case pendingApproval && boost.PreApproved:
+		// If approval is required and boost is
+		// preapproved, that means this is a boost
+		// of one of our statuses with permission
+		// that matched on a following/followers
+		// collection. Do the Accept immediately and
+		// then process everything else as normal,
+		// sending out the Create with the approval
+		// URI attached.
+
+		// Store an already-accepted interaction request.
+		id := id.NewULID()
+		approval := &gtsmodel.InteractionRequest{
+			ID:                   id,
+			StatusID:             boost.BoostOfID,
+			TargetAccountID:      boost.BoostOfAccountID,
+			TargetAccount:        boost.BoostOfAccount,
+			InteractingAccountID: boost.AccountID,
+			InteractingAccount:   boost.Account,
+			InteractionURI:       boost.URI,
+			InteractionType:      gtsmodel.InteractionLike,
+			Announce:             boost,
+			URI:                  uris.GenerateURIForAccept(boost.BoostOfAccount.Username, id),
+			AcceptedAt:           time.Now(),
+		}
+		if err := p.state.DB.PutInteractionRequest(ctx, approval); err != nil {
+			return gtserror.Newf("db error putting pre-approved interaction request: %w", err)
+		}
+
+		// Mark the boost itself as now approved.
+		boost.PendingApproval = util.Ptr(false)
+		boost.PreApproved = false
+		boost.ApprovedByURI = approval.URI
+		if err := p.state.DB.UpdateStatus(
+			ctx,
+			boost,
+			"pending_approval",
+			"approved_by_uri",
+		); err != nil {
+			return gtserror.Newf("db error updating status: %w", err)
+		}
+
+		if err := p.federate.AcceptInteraction(ctx, approval); err != nil {
+			return gtserror.Newf("error federating pre-approval of boost: %w", err)
+		}
+
+		// Don't return, just continue as normal.
 	}
 
 	// Update stats for the actor account.
@@ -398,13 +650,13 @@ func (p *clientAPI) CreateAnnounce(ctx context.Context, cMsg *messages.FromClien
 		log.Errorf(ctx, "error notifying boost: %v", err)
 	}
 
-	// Interaction counts changed on the boosted status;
-	// uncache the prepared version from all timelines.
-	p.surface.invalidateStatusFromTimelines(ctx, boost.BoostOfID)
-
 	if err := p.federate.Announce(ctx, boost); err != nil {
 		log.Errorf(ctx, "error federating announce: %v", err)
 	}
+
+	// Interaction counts changed on the boosted status;
+	// uncache the prepared version from all timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, boost.BoostOfID)
 
 	return nil
 }
@@ -455,9 +707,6 @@ func (p *clientAPI) UpdateStatus(ctx context.Context, cMsg *messages.FromClientA
 		log.Errorf(ctx, "error federating status update: %v", err)
 	}
 
-	// Status representation has changed, invalidate from timelines.
-	p.surface.invalidateStatusFromTimelines(ctx, status.ID)
-
 	if status.Poll != nil && status.Poll.Closing {
 
 		// If the latest status has a newly closed poll, at least compared
@@ -471,6 +720,9 @@ func (p *clientAPI) UpdateStatus(ctx context.Context, cMsg *messages.FromClientA
 	if err := p.surface.timelineStatusUpdate(ctx, status); err != nil {
 		log.Errorf(ctx, "error streaming status edit: %v", err)
 	}
+
+	// Status representation has changed, invalidate from timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, status.ID)
 
 	return nil
 }
@@ -617,13 +869,13 @@ func (p *clientAPI) UndoFave(ctx context.Context, cMsg *messages.FromClientAPI) 
 		return gtserror.Newf("%T not parseable as *gtsmodel.StatusFave", cMsg.GTSModel)
 	}
 
-	// Interaction counts changed on the faved status;
-	// uncache the prepared version from all timelines.
-	p.surface.invalidateStatusFromTimelines(ctx, statusFave.StatusID)
-
 	if err := p.federate.UndoLike(ctx, statusFave); err != nil {
 		log.Errorf(ctx, "error federating like undo: %v", err)
 	}
+
+	// Interaction counts changed on the faved status;
+	// uncache the prepared version from all timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, statusFave.StatusID)
 
 	return nil
 }
@@ -639,7 +891,7 @@ func (p *clientAPI) UndoAnnounce(ctx context.Context, cMsg *messages.FromClientA
 	}
 
 	// Update stats for the origin account.
-	if err := p.utils.decrementStatusesCount(ctx, cMsg.Origin); err != nil {
+	if err := p.utils.decrementStatusesCount(ctx, cMsg.Origin, status); err != nil {
 		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
@@ -647,23 +899,18 @@ func (p *clientAPI) UndoAnnounce(ctx context.Context, cMsg *messages.FromClientA
 		log.Errorf(ctx, "error removing timelined status: %v", err)
 	}
 
-	// Interaction counts changed on the boosted status;
-	// uncache the prepared version from all timelines.
-	p.surface.invalidateStatusFromTimelines(ctx, status.BoostOfID)
-
 	if err := p.federate.UndoAnnounce(ctx, status); err != nil {
 		log.Errorf(ctx, "error federating announce undo: %v", err)
 	}
+
+	// Interaction counts changed on the boosted status;
+	// uncache the prepared version from all timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, status.BoostOfID)
 
 	return nil
 }
 
 func (p *clientAPI) DeleteStatus(ctx context.Context, cMsg *messages.FromClientAPI) error {
-	// Don't delete attachments, just unattach them:
-	// this request comes from the client API and the
-	// poster may want to use attachments again later.
-	const deleteAttachments = false
-
 	status, ok := cMsg.GTSModel.(*gtsmodel.Status)
 	if !ok {
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", cMsg.GTSModel)
@@ -690,24 +937,38 @@ func (p *clientAPI) DeleteStatus(ctx context.Context, cMsg *messages.FromClientA
 	// (stops processing of remote origin data targeting this status).
 	p.state.Workers.Federator.Queue.Delete("TargetURI", status.URI)
 
-	// First perform the actual status deletion.
-	if err := p.utils.wipeStatus(ctx, status, deleteAttachments); err != nil {
+	// Don't delete attachments, just unattach them:
+	// this request comes from the client API and the
+	// poster may want to use attachments again later.
+	const deleteAttachments = false
+
+	// This is just a deletion, not a Reject,
+	// we don't need to take a copy of this status.
+	const copyToSinBin = false
+
+	// Perform the actual status deletion.
+	if err := p.utils.wipeStatus(
+		ctx,
+		status,
+		deleteAttachments,
+		copyToSinBin,
+	); err != nil {
 		log.Errorf(ctx, "error wiping status: %v", err)
 	}
 
 	// Update stats for the origin account.
-	if err := p.utils.decrementStatusesCount(ctx, cMsg.Origin); err != nil {
+	if err := p.utils.decrementStatusesCount(ctx, cMsg.Origin, status); err != nil {
 		log.Errorf(ctx, "error updating account stats: %v", err)
+	}
+
+	if err := p.federate.DeleteStatus(ctx, status); err != nil {
+		log.Errorf(ctx, "error federating status delete: %v", err)
 	}
 
 	if status.InReplyToID != "" {
 		// Interaction counts changed on the replied status;
 		// uncache the prepared version from all timelines.
 		p.surface.invalidateStatusFromTimelines(ctx, status.InReplyToID)
-	}
-
-	if err := p.federate.DeleteStatus(ctx, status); err != nil {
-		log.Errorf(ctx, "error federating status delete: %v", err)
 	}
 
 	return nil
@@ -870,6 +1131,220 @@ func (p *clientAPI) RejectUser(ctx context.Context, cMsg *messages.FromClientAPI
 		if err := p.surface.emailUserSignupRejected(ctx, deniedUser); err != nil {
 			log.Errorf(ctx, "error emailing: %v", err)
 		}
+	}
+
+	return nil
+}
+
+func (p *clientAPI) AcceptLike(ctx context.Context, cMsg *messages.FromClientAPI) error {
+	req, ok := cMsg.GTSModel.(*gtsmodel.InteractionRequest)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
+	}
+
+	// Notify the fave (distinct from the notif for the pending fave).
+	if err := p.surface.notifyFave(ctx, req.Like); err != nil {
+		log.Errorf(ctx, "error notifying fave: %v", err)
+	}
+
+	// Send out the Accept.
+	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
+		log.Errorf(ctx, "error federating approval of like: %v", err)
+	}
+
+	// Interaction counts changed on the faved status;
+	// uncache the prepared version from all timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, req.Like.StatusID)
+
+	return nil
+}
+
+func (p *clientAPI) AcceptReply(ctx context.Context, cMsg *messages.FromClientAPI) error {
+	req, ok := cMsg.GTSModel.(*gtsmodel.InteractionRequest)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
+	}
+
+	var (
+		interactingAcct = req.InteractingAccount
+		reply           = req.Reply
+	)
+
+	// Update stats for the reply author account.
+	if err := p.utils.incrementStatusesCount(ctx, interactingAcct, reply); err != nil {
+		log.Errorf(ctx, "error updating account stats: %v", err)
+	}
+
+	// Timeline the reply + notify relevant accounts.
+	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
+		log.Errorf(ctx, "error timelining and notifying status reply: %v", err)
+	}
+
+	// Send out the Accept.
+	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
+		log.Errorf(ctx, "error federating approval of reply: %v", err)
+	}
+
+	// Interaction counts changed on the replied status;
+	// uncache the prepared version from all timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, reply.InReplyToID)
+
+	return nil
+}
+
+func (p *clientAPI) AcceptAnnounce(ctx context.Context, cMsg *messages.FromClientAPI) error {
+	req, ok := cMsg.GTSModel.(*gtsmodel.InteractionRequest)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
+	}
+
+	var (
+		interactingAcct = req.InteractingAccount
+		boost           = req.Announce
+	)
+
+	// Update stats for the boost author account.
+	if err := p.utils.incrementStatusesCount(ctx, interactingAcct, boost); err != nil {
+		log.Errorf(ctx, "error updating account stats: %v", err)
+	}
+
+	// Timeline and notify the announce.
+	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
+		log.Errorf(ctx, "error timelining and notifying status: %v", err)
+	}
+
+	// Notify the announce (distinct from the notif for the pending announce).
+	if err := p.surface.notifyAnnounce(ctx, boost); err != nil {
+		log.Errorf(ctx, "error notifying announce: %v", err)
+	}
+
+	// Send out the Accept.
+	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
+		log.Errorf(ctx, "error federating approval of announce: %v", err)
+	}
+
+	// Interaction counts changed on the original status;
+	// uncache the prepared version from all timelines.
+	p.surface.invalidateStatusFromTimelines(ctx, boost.BoostOfID)
+
+	return nil
+}
+
+func (p *clientAPI) RejectLike(ctx context.Context, cMsg *messages.FromClientAPI) error {
+	req, ok := cMsg.GTSModel.(*gtsmodel.InteractionRequest)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
+	}
+
+	// At this point the InteractionRequest should already
+	// be in the database, we just need to do side effects.
+
+	// Send out the Reject.
+	if err := p.federate.RejectInteraction(ctx, req); err != nil {
+		log.Errorf(ctx, "error federating rejection of like: %v", err)
+	}
+
+	// Get the rejected fave.
+	fave, err := p.state.DB.GetStatusFaveByURI(
+		gtscontext.SetBarebones(ctx),
+		req.InteractionURI,
+	)
+	if err != nil {
+		return gtserror.Newf("db error getting rejected fave: %w", err)
+	}
+
+	// Delete the status fave.
+	if err := p.state.DB.DeleteStatusFaveByID(ctx, fave.ID); err != nil {
+		return gtserror.Newf("db error deleting status fave: %w", err)
+	}
+
+	return nil
+}
+
+func (p *clientAPI) RejectReply(ctx context.Context, cMsg *messages.FromClientAPI) error {
+	req, ok := cMsg.GTSModel.(*gtsmodel.InteractionRequest)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
+	}
+
+	// At this point the InteractionRequest should already
+	// be in the database, we just need to do side effects.
+
+	// Send out the Reject.
+	if err := p.federate.RejectInteraction(ctx, req); err != nil {
+		log.Errorf(ctx, "error federating rejection of reply: %v", err)
+	}
+
+	// Get the rejected status.
+	status, err := p.state.DB.GetStatusByURI(
+		gtscontext.SetBarebones(ctx),
+		req.InteractionURI,
+	)
+	if err != nil {
+		return gtserror.Newf("db error getting rejected reply: %w", err)
+	}
+
+	// Delete attachments from this status.
+	// It's rejected so there's no possibility
+	// for the poster to delete + redraft it.
+	const deleteAttachments = true
+
+	// Keep a copy of the status in
+	// the sin bin for future review.
+	const copyToSinBin = true
+
+	// Perform the actual status deletion.
+	if err := p.utils.wipeStatus(
+		ctx,
+		status,
+		deleteAttachments,
+		copyToSinBin,
+	); err != nil {
+		log.Errorf(ctx, "error wiping reply: %v", err)
+	}
+
+	return nil
+}
+
+func (p *clientAPI) RejectAnnounce(ctx context.Context, cMsg *messages.FromClientAPI) error {
+	req, ok := cMsg.GTSModel.(*gtsmodel.InteractionRequest)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
+	}
+
+	// At this point the InteractionRequest should already
+	// be in the database, we just need to do side effects.
+
+	// Send out the Reject.
+	if err := p.federate.RejectInteraction(ctx, req); err != nil {
+		log.Errorf(ctx, "error federating rejection of announce: %v", err)
+	}
+
+	// Get the rejected boost.
+	boost, err := p.state.DB.GetStatusByURI(
+		gtscontext.SetBarebones(ctx),
+		req.InteractionURI,
+	)
+	if err != nil {
+		return gtserror.Newf("db error getting rejected announce: %w", err)
+	}
+
+	// Boosts don't have attachments anyway
+	// so it doesn't matter what we set here.
+	const deleteAttachments = true
+
+	// This is just a boost, don't
+	// keep a copy in the sin bin.
+	const copyToSinBin = true
+
+	// Perform the actual status deletion.
+	if err := p.utils.wipeStatus(
+		ctx,
+		boost,
+		deleteAttachments,
+		copyToSinBin,
+	); err != nil {
+		log.Errorf(ctx, "error wiping announce: %v", err)
 	}
 
 	return nil

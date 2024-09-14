@@ -29,6 +29,8 @@ import (
 
 var testModels = []interface{}{
 	&gtsmodel.Account{},
+	&gtsmodel.AccountNote{},
+	&gtsmodel.AccountSettings{},
 	&gtsmodel.AccountToEmoji{},
 	&gtsmodel.Application{},
 	&gtsmodel.Block{},
@@ -39,6 +41,7 @@ var testModels = []interface{}{
 	&gtsmodel.FilterStatus{},
 	&gtsmodel.Follow{},
 	&gtsmodel.FollowRequest{},
+	&gtsmodel.InteractionRequest{},
 	&gtsmodel.List{},
 	&gtsmodel.ListEntry{},
 	&gtsmodel.Marker{},
@@ -67,8 +70,7 @@ var testModels = []interface{}{
 	&gtsmodel.Tombstone{},
 	&gtsmodel.Report{},
 	&gtsmodel.Rule{},
-	&gtsmodel.AccountNote{},
-	&gtsmodel.AccountSettings{},
+	&gtsmodel.WorkerTask{},
 }
 
 // NewTestDB returns a new initialized, empty database for testing.
@@ -340,6 +342,12 @@ func StandardDBSetup(db db.DB, accounts map[string]*gtsmodel.Account) {
 	}
 
 	for _, v := range NewTestUserMutes() {
+		if err := db.Put(ctx, v); err != nil {
+			log.Panic(nil, err)
+		}
+	}
+
+	for _, v := range NewTestInteractionRequests() {
 		if err := db.Put(ctx, v); err != nil {
 			log.Panic(nil, err)
 		}

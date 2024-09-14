@@ -195,17 +195,12 @@ func ExtractPollOptionables(arr []TypeOrIRI) ([]PollOptionable, []TypeOrIRI) {
 // ExtractPreferredUsername returns a string representation of
 // an interface's preferredUsername property. Will return an
 // error if preferredUsername is nil, not a string, or empty.
-func ExtractPreferredUsername(i WithPreferredUsername) (string, error) {
+func ExtractPreferredUsername(i WithPreferredUsername) string {
 	u := i.GetActivityStreamsPreferredUsername()
 	if u == nil || !u.IsXMLSchemaString() {
-		return "", gtserror.New("preferredUsername nil or not a string")
+		return ""
 	}
-
-	if u.GetXMLSchemaString() == "" {
-		return "", gtserror.New("preferredUsername was empty")
-	}
-
-	return u.GetXMLSchemaString(), nil
+	return u.GetXMLSchemaString()
 }
 
 // ExtractName returns the first string representation it
@@ -1055,6 +1050,137 @@ func ExtractVisibility(addressable Addressable, actorFollowersURI string) (gtsmo
 	}
 
 	return visibility, nil
+}
+
+// ExtractInteractionPolicy extracts a *gtsmodel.InteractionPolicy
+// from the given Statusable created by by the given *gtsmodel.Account.
+//
+// Will be nil (default policy) for Statusables that have no policy
+// set on them, or have a null policy. In such a case, the caller
+// should assume the default policy for the status's visibility level.
+func ExtractInteractionPolicy(
+	statusable Statusable,
+	owner *gtsmodel.Account,
+) *gtsmodel.InteractionPolicy {
+	policyProp := statusable.GetGoToSocialInteractionPolicy()
+	if policyProp == nil || policyProp.Len() != 1 {
+		return nil
+	}
+
+	policyPropIter := policyProp.At(0)
+	if !policyPropIter.IsGoToSocialInteractionPolicy() {
+		return nil
+	}
+
+	policy := policyPropIter.Get()
+	if policy == nil {
+		return nil
+	}
+
+	return &gtsmodel.InteractionPolicy{
+		CanLike:     extractCanLike(policy.GetGoToSocialCanLike(), owner),
+		CanReply:    extractCanReply(policy.GetGoToSocialCanReply(), owner),
+		CanAnnounce: extractCanAnnounce(policy.GetGoToSocialCanAnnounce(), owner),
+	}
+}
+
+func extractCanLike(
+	prop vocab.GoToSocialCanLikeProperty,
+	owner *gtsmodel.Account,
+) gtsmodel.PolicyRules {
+	if prop == nil || prop.Len() != 1 {
+		return gtsmodel.PolicyRules{}
+	}
+
+	propIter := prop.At(0)
+	if !propIter.IsGoToSocialCanLike() {
+		return gtsmodel.PolicyRules{}
+	}
+
+	withRules := propIter.Get()
+	if withRules == nil {
+		return gtsmodel.PolicyRules{}
+	}
+
+	return gtsmodel.PolicyRules{
+		Always:       extractPolicyValues(withRules.GetGoToSocialAlways(), owner),
+		WithApproval: extractPolicyValues(withRules.GetGoToSocialApprovalRequired(), owner),
+	}
+}
+
+func extractCanReply(
+	prop vocab.GoToSocialCanReplyProperty,
+	owner *gtsmodel.Account,
+) gtsmodel.PolicyRules {
+	if prop == nil || prop.Len() != 1 {
+		return gtsmodel.PolicyRules{}
+	}
+
+	propIter := prop.At(0)
+	if !propIter.IsGoToSocialCanReply() {
+		return gtsmodel.PolicyRules{}
+	}
+
+	withRules := propIter.Get()
+	if withRules == nil {
+		return gtsmodel.PolicyRules{}
+	}
+
+	return gtsmodel.PolicyRules{
+		Always:       extractPolicyValues(withRules.GetGoToSocialAlways(), owner),
+		WithApproval: extractPolicyValues(withRules.GetGoToSocialApprovalRequired(), owner),
+	}
+}
+
+func extractCanAnnounce(
+	prop vocab.GoToSocialCanAnnounceProperty,
+	owner *gtsmodel.Account,
+) gtsmodel.PolicyRules {
+	if prop == nil || prop.Len() != 1 {
+		return gtsmodel.PolicyRules{}
+	}
+
+	propIter := prop.At(0)
+	if !propIter.IsGoToSocialCanAnnounce() {
+		return gtsmodel.PolicyRules{}
+	}
+
+	withRules := propIter.Get()
+	if withRules == nil {
+		return gtsmodel.PolicyRules{}
+	}
+
+	return gtsmodel.PolicyRules{
+		Always:       extractPolicyValues(withRules.GetGoToSocialAlways(), owner),
+		WithApproval: extractPolicyValues(withRules.GetGoToSocialApprovalRequired(), owner),
+	}
+}
+
+func extractPolicyValues[T WithIRI](
+	prop Property[T],
+	owner *gtsmodel.Account,
+) gtsmodel.PolicyValues {
+	iris := getIRIs(prop)
+	PolicyValues := make(gtsmodel.PolicyValues, 0, len(iris))
+
+	for _, iri := range iris {
+		switch iriStr := iri.String(); iriStr {
+		case pub.PublicActivityPubIRI:
+			PolicyValues = append(PolicyValues, gtsmodel.PolicyValuePublic)
+		case owner.FollowersURI:
+			PolicyValues = append(PolicyValues, gtsmodel.PolicyValueFollowers)
+		case owner.FollowingURI:
+			PolicyValues = append(PolicyValues, gtsmodel.PolicyValueFollowers)
+		case owner.URI:
+			PolicyValues = append(PolicyValues, gtsmodel.PolicyValueAuthor)
+		default:
+			if iri.Scheme == "http" || iri.Scheme == "https" {
+				PolicyValues = append(PolicyValues, gtsmodel.PolicyValue(iriStr))
+			}
+		}
+	}
+
+	return PolicyValues
 }
 
 // ExtractSensitive extracts whether or not an item should

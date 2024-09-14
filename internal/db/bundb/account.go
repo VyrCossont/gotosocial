@@ -64,8 +64,15 @@ func (a *accountDB) GetAccountsByIDs(ctx context.Context, ids []string) ([]*gtsm
 	accounts, err := a.state.Caches.DB.Account.LoadIDs("ID",
 		ids,
 		func(uncached []string) ([]*gtsmodel.Account, error) {
+			// Avoid querying
+			// if none uncached.
+			count := len(uncached)
+			if count == 0 {
+				return nil, nil
+			}
+
 			// Preallocate expected length of uncached accounts.
-			accounts := make([]*gtsmodel.Account, 0, len(uncached))
+			accounts := make([]*gtsmodel.Account, 0, count)
 
 			// Perform database query scanning
 			// the remaining (uncached) account IDs.
@@ -712,11 +719,9 @@ func (a *accountDB) PopulateAccount(ctx context.Context, account *gtsmodel.Accou
 		}
 	}
 
-	if account.Stats == nil {
-		// Get / Create stats for this account.
-		if err := a.state.DB.PopulateAccountStats(ctx, account); err != nil {
-			errs.Appendf("error populating account stats: %w", err)
-		}
+	// Get / Create stats for this account (handles case of already set).
+	if err := a.state.DB.PopulateAccountStats(ctx, account); err != nil {
+		errs.Appendf("error populating account stats: %w", err)
 	}
 
 	return errs.Combine()
@@ -1042,7 +1047,18 @@ func (a *accountDB) GetAccountPinnedStatuses(ctx context.Context, accountID stri
 	return a.state.DB.GetStatusesByIDs(ctx, statusIDs)
 }
 
-func (a *accountDB) GetAccountWebStatuses(ctx context.Context, accountID string, limit int, maxID string) ([]*gtsmodel.Status, error) {
+func (a *accountDB) GetAccountWebStatuses(
+	ctx context.Context,
+	account *gtsmodel.Account,
+	limit int,
+	maxID string,
+) ([]*gtsmodel.Status, error) {
+	// Check for an easy case: account exposes no statuses via the web.
+	webVisibility := account.Settings.WebVisibility
+	if webVisibility == gtsmodel.VisibilityNone {
+		return nil, db.ErrNoEntries
+	}
+
 	// Ensure reasonable
 	if limit < 0 {
 		limit = 0
@@ -1056,14 +1072,36 @@ func (a *accountDB) GetAccountWebStatuses(ctx context.Context, accountID string,
 		TableExpr("? AS ?", bun.Ident("statuses"), bun.Ident("status")).
 		// Select only IDs from table
 		Column("status.id").
-		Where("? = ?", bun.Ident("status.account_id"), accountID).
+		Where("? = ?", bun.Ident("status.account_id"), account.ID).
 		// Don't show replies or boosts.
 		Where("? IS NULL", bun.Ident("status.in_reply_to_uri")).
-		Where("? IS NULL", bun.Ident("status.boost_of_id")).
+		Where("? IS NULL", bun.Ident("status.boost_of_id"))
+
+	// Select statuses for this account according
+	// to their web visibility preference.
+	switch webVisibility {
+
+	case gtsmodel.VisibilityPublic:
 		// Only Public statuses.
-		Where("? = ?", bun.Ident("status.visibility"), gtsmodel.VisibilityPublic).
-		// Don't show local-only statuses on the web view.
-		Where("? = ?", bun.Ident("status.federated"), true)
+		q = q.Where("? = ?", bun.Ident("status.visibility"), gtsmodel.VisibilityPublic)
+
+	case gtsmodel.VisibilityUnlocked:
+		// Public or Unlocked.
+		visis := []gtsmodel.Visibility{
+			gtsmodel.VisibilityPublic,
+			gtsmodel.VisibilityUnlocked,
+		}
+		q = q.Where("? IN (?)", bun.Ident("status.visibility"), bun.In(visis))
+
+	default:
+		return nil, gtserror.Newf(
+			"unrecognized web visibility for account %s: %s",
+			account.ID, webVisibility,
+		)
+	}
+
+	// Don't show local-only statuses on the web view.
+	q = q.Where("? = ?", bun.Ident("status.federated"), true)
 
 	// return only statuses LOWER (ie., older) than maxID
 	if maxID == "" {
@@ -1140,10 +1178,30 @@ func (a *accountDB) UpdateAccountSettings(
 ) error {
 	return a.state.Caches.DB.AccountSettings.Store(settings, func() error {
 		settings.UpdatedAt = time.Now()
-		if len(columns) > 0 {
+
+		switch {
+
+		case len(columns) != 0:
 			// If we're updating by column,
 			// ensure "updated_at" is included.
 			columns = append(columns, "updated_at")
+
+			// If we're updating web_visibility we should
+			// fall through + invalidate visibility cache.
+			if !slices.Contains(columns, "web_visibility") {
+				break // No need to invalidate.
+			}
+
+			// Fallthrough
+			// to invalidate.
+			fallthrough
+
+		case len(columns) == 0:
+			// Status visibility may be changing for this account.
+			// Clear the visibility cache for unauthed requesters.
+			//
+			// todo: invalidate JUST this account's statuses.
+			defer a.state.Caches.Visibility.Clear()
 		}
 
 		if _, err := a.db.
@@ -1160,6 +1218,11 @@ func (a *accountDB) UpdateAccountSettings(
 }
 
 func (a *accountDB) PopulateAccountStats(ctx context.Context, account *gtsmodel.Account) error {
+	if account.Stats != nil {
+		// Already populated!
+		return nil
+	}
+
 	// Fetch stats from db cache with loader callback.
 	stats, err := a.state.Caches.DB.AccountStats.LoadOne(
 		"AccountID",
@@ -1282,34 +1345,40 @@ func (a *accountDB) RegenerateAccountStats(ctx context.Context, account *gtsmode
 	if err := a.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		var err error
 
-		// Scan database for account statuses.
+		// Scan database for account statuses, ignoring
+		// statuses that are currently pending approval.
 		statusesCount, err := tx.NewSelect().
-			Table("statuses").
-			Where("? = ?", bun.Ident("account_id"), account.ID).
+			TableExpr("? AS ?", bun.Ident("statuses"), bun.Ident("status")).
+			Where("? = ?", bun.Ident("status.account_id"), account.ID).
+			Where("NOT ? = ?", bun.Ident("status.pending_approval"), true).
 			Count(ctx)
 		if err != nil {
 			return err
 		}
 		stats.StatusesCount = &statusesCount
 
-		// Scan database for pinned statuses.
+		// Scan database for pinned statuses, ignoring
+		// statuses that are currently pending approval.
 		statusesPinnedCount, err := tx.NewSelect().
-			Table("statuses").
-			Where("? = ?", bun.Ident("account_id"), account.ID).
-			Where("? IS NOT NULL", bun.Ident("pinned_at")).
+			TableExpr("? AS ?", bun.Ident("statuses"), bun.Ident("status")).
+			Where("? = ?", bun.Ident("status.account_id"), account.ID).
+			Where("? IS NOT NULL", bun.Ident("status.pinned_at")).
+			Where("NOT ? = ?", bun.Ident("status.pending_approval"), true).
 			Count(ctx)
 		if err != nil {
 			return err
 		}
 		stats.StatusesPinnedCount = &statusesPinnedCount
 
-		// Scan database for last status.
+		// Scan database for last status, ignoring
+		// statuses that are currently pending approval.
 		lastStatusAt := time.Time{}
 		err = tx.
 			NewSelect().
 			TableExpr("? AS ?", bun.Ident("statuses"), bun.Ident("status")).
 			Column("status.created_at").
 			Where("? = ?", bun.Ident("status.account_id"), account.ID).
+			Where("NOT ? = ?", bun.Ident("status.pending_approval"), true).
 			Order("status.id DESC").
 			Limit(1).
 			Scan(ctx, &lastStatusAt)

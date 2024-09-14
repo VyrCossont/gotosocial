@@ -374,6 +374,21 @@ section.with-sidebar > form {
 		flex-wrap: wrap;
 		gap: 0.4rem;
 	}
+
+	.select-wrapper {
+		/*
+			Selects are normalized in base.css to not have a down arrow on the side.
+			Overcome this on settings panel forms by replacing the down arrow.
+		*/
+		position: relative;
+		&::after {
+			content: "▼";
+			font-size: 0.8rem;
+			top: 0.3rem;
+			right: 1rem;
+			position: absolute;
+		}
+	}
 }
 
 .form-flex {
@@ -581,6 +596,10 @@ span.form-info {
 	.filter {
 		display: flex;
 		gap: 0.5rem;
+
+		button {
+			width: 100%;
+		}
 	}
 
 	.entry {
@@ -1298,10 +1317,10 @@ button.tab-button {
 			word-break: break-word;
 		}
 
-		dt, dd {
+		dt, dd, span {
 			/*
 				Make sure any fa icons used in keys
-				or values are properly aligned.
+				or values etc. are properly aligned.
 			*/
 			.fa {
 				vertical-align: middle;
@@ -1461,6 +1480,93 @@ button.tab-button {
 				margin-top: -0.3rem;
 			}
 		}
+	}
+}
+
+.export-data {
+	.export-buttons-wrapper {
+		display: grid;
+		max-width: fit-content;
+		gap: 0.5rem;
+
+		.stats-and-button {
+			display: grid;
+			grid-template-columns: 13rem 1fr;
+			align-items: center;
+			gap: 0.25rem;
+	
+			.mutation-button {
+				width: 100%;
+				overflow-x: hidden;
+	
+				button {
+					font-size: 1rem;
+					width: 100%;
+				}
+			}
+		}
+	
+		@media screen and (max-width: 35rem) {
+			gap: 1rem;
+			
+			.stats-and-button {
+				grid-template-columns: auto;
+			}
+		}
+	}
+}
+
+
+.interaction-requests-view {
+	.interaction-request {
+		display: flex;
+		flex-direction: column;
+		flex-wrap: nowrap;
+		gap: 0.5rem;
+		color: $fg;
+
+		.info-list {
+			border: none;
+
+			.info-list-entry {
+				grid-template-columns: max(20%, 8rem) 1fr;
+				background: none;
+				padding: 0;
+			}
+		}
+
+		.action-buttons {
+			display: flex;
+			gap: 0.5rem;
+			align-items: center;
+
+			> .mutation-button
+			> button {
+				font-size: 1rem;
+				line-height: 1rem;
+			}
+		}
+	}
+}
+
+.interaction-request-detail {
+	.overview {
+		margin-top: 1rem;
+	}
+
+	h2 {
+		font-size: 1rem;
+	}
+
+	.thread .status .status-info {
+		border-bottom-left-radius: $br;
+		border-bottom-right-radius: $br;
+	}
+
+	.action-buttons {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
 	}
 }
 

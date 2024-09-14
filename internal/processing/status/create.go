@@ -45,7 +45,7 @@ func (p *Processor) Create(
 	ctx context.Context,
 	requester *gtsmodel.Account,
 	application *gtsmodel.Application,
-	form *apimodel.AdvancedStatusCreateForm,
+	form *apimodel.StatusCreateRequest,
 ) (
 	*apimodel.Status,
 	gtserror.WithCode,
@@ -221,8 +221,17 @@ func (p *Processor) processInReplyTo(ctx context.Context, requester *gtsmodel.Ac
 		// We're permitted to do this, but since
 		// we matched due to presence in a followers
 		// or following collection, we should mark
-		// as pending approval and wait for an accept.
+		// as pending approval and wait until we can
+		// prove it's been Accepted by the target.
 		pendingApproval = true
+
+		if *inReplyTo.Local {
+			// If the target is local we don't need
+			// to wait for an Accept from remote,
+			// we can just preapprove it and have
+			// the processor create the Accept.
+			status.PreApproved = true
+		}
 
 	case policyResult.Permitted():
 		// We're permitted to do this
@@ -281,7 +290,7 @@ func (p *Processor) processThreadID(ctx context.Context, status *gtsmodel.Status
 	return nil
 }
 
-func (p *Processor) processMediaIDs(ctx context.Context, form *apimodel.AdvancedStatusCreateForm, thisAccountID string, status *gtsmodel.Status) gtserror.WithCode {
+func (p *Processor) processMediaIDs(ctx context.Context, form *apimodel.StatusCreateRequest, thisAccountID string, status *gtsmodel.Status) gtserror.WithCode {
 	if form.MediaIDs == nil {
 		return nil
 	}
@@ -329,7 +338,7 @@ func (p *Processor) processMediaIDs(ctx context.Context, form *apimodel.Advanced
 }
 
 func processVisibility(
-	form *apimodel.AdvancedStatusCreateForm,
+	form *apimodel.StatusCreateRequest,
 	accountDefaultVis gtsmodel.Visibility,
 	status *gtsmodel.Status,
 ) error {
@@ -347,16 +356,16 @@ func processVisibility(
 		status.Visibility = gtsmodel.VisibilityDefault
 	}
 
-	// Set federated flag to form value
-	// if provided, or default to true.
-	federated := util.PtrOrValue(form.Federated, true)
-	status.Federated = &federated
+	// Set federated according to "local_only" field,
+	// assuming federated (ie., not local-only) by default.
+	localOnly := util.PtrOrValue(form.LocalOnly, false)
+	status.Federated = util.Ptr(!localOnly)
 
 	return nil
 }
 
 func processInteractionPolicy(
-	_ *apimodel.AdvancedStatusCreateForm,
+	_ *apimodel.StatusCreateRequest,
 	settings *gtsmodel.AccountSettings,
 	status *gtsmodel.Status,
 ) error {
@@ -404,7 +413,7 @@ func processInteractionPolicy(
 	return nil
 }
 
-func processLanguage(form *apimodel.AdvancedStatusCreateForm, accountDefaultLanguage string, status *gtsmodel.Status) error {
+func processLanguage(form *apimodel.StatusCreateRequest, accountDefaultLanguage string, status *gtsmodel.Status) error {
 	if form.Language != "" {
 		status.Language = form.Language
 	} else {
@@ -416,7 +425,7 @@ func processLanguage(form *apimodel.AdvancedStatusCreateForm, accountDefaultLang
 	return nil
 }
 
-func (p *Processor) processContent(ctx context.Context, parseMention gtsmodel.ParseMentionFunc, form *apimodel.AdvancedStatusCreateForm, status *gtsmodel.Status) error {
+func (p *Processor) processContent(ctx context.Context, parseMention gtsmodel.ParseMentionFunc, form *apimodel.StatusCreateRequest, status *gtsmodel.Status) error {
 	if form.ContentType == "" {
 		// If content type wasn't specified, use the author's preferred content-type.
 		contentType := apimodel.StatusContentType(status.Account.Settings.StatusContentType)

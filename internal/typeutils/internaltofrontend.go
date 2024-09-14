@@ -100,26 +100,31 @@ func (c *Converter) UserToAPIUser(ctx context.Context, u *gtsmodel.User) *apimod
 	return user
 }
 
-// AppToAPIAppSensitive takes a db model application as a param, and returns a populated apitype application, or an error
+// AccountToAPIAccountSensitive takes a db model application as a param, and returns a populated apitype application, or an error
 // if something goes wrong. The returned application should be ready to serialize on an API level, and may have sensitive fields
 // (such as client id and client secret), so serve it only to an authorized user who should have permission to see it.
 func (c *Converter) AccountToAPIAccountSensitive(ctx context.Context, a *gtsmodel.Account) (*apimodel.Account, error) {
 	// We can build this sensitive account model
 	// by first getting the public account, and
-	// then adding the Source object to it.
+	// then adding the Source object and role permissions bitmap to it.
 	apiAccount, err := c.AccountToAPIAccountPublic(ctx, a)
 	if err != nil {
 		return nil, err
 	}
 
 	// Ensure account stats populated.
-	if a.Stats == nil {
-		if err := c.state.DB.PopulateAccountStats(ctx, a); err != nil {
-			return nil, gtserror.Newf(
-				"error getting stats for account %s: %w",
-				a.ID, err,
-			)
-		}
+	if err := c.state.DB.PopulateAccountStats(ctx, a); err != nil {
+		return nil, gtserror.Newf(
+			"error getting stats for account %s: %w",
+			a.ID, err,
+		)
+	}
+
+	// Populate the account's role permissions bitmap and highlightedness from its public role.
+	if len(apiAccount.Roles) > 0 {
+		apiAccount.Role = c.APIAccountDisplayRoleToAPIAccountRoleSensitive(&apiAccount.Roles[0])
+	} else {
+		apiAccount.Role = c.APIAccountDisplayRoleToAPIAccountRoleSensitive(nil)
 	}
 
 	statusContentType := string(apimodel.StatusContentTypeDefault)
@@ -129,6 +134,7 @@ func (c *Converter) AccountToAPIAccountSensitive(ctx context.Context, a *gtsmode
 
 	apiAccount.Source = &apimodel.Source{
 		Privacy:             c.VisToAPIVis(ctx, a.Settings.Privacy),
+		WebVisibility:       c.VisToAPIVis(ctx, a.Settings.WebVisibility),
 		Sensitive:           *a.Settings.Sensitive,
 		Language:            a.Settings.Language,
 		StatusContentType:   statusContentType,
@@ -299,7 +305,7 @@ func (c *Converter) accountToAPIAccountPublic(ctx context.Context, a *gtsmodel.A
 
 	var (
 		acct            string
-		role            *apimodel.AccountRole
+		roles           []apimodel.AccountDisplayRole
 		enableRSS       bool
 		theme           string
 		customCSS       string
@@ -324,14 +330,8 @@ func (c *Converter) accountToAPIAccountPublic(ctx context.Context, a *gtsmodel.A
 			if err != nil {
 				return nil, gtserror.Newf("error getting user from database for account id %s: %w", a.ID, err)
 			}
-
-			switch {
-			case *user.Admin:
-				role = &apimodel.AccountRole{Name: apimodel.AccountRoleAdmin}
-			case *user.Moderator:
-				role = &apimodel.AccountRole{Name: apimodel.AccountRoleModerator}
-			default:
-				role = &apimodel.AccountRole{Name: apimodel.AccountRoleUser}
+			if role := c.UserToAPIAccountDisplayRole(user); role != nil {
+				roles = append(roles, *role)
 			}
 
 			enableRSS = *a.Settings.EnableRSS
@@ -380,7 +380,7 @@ func (c *Converter) accountToAPIAccountPublic(ctx context.Context, a *gtsmodel.A
 		CustomCSS:         customCSS,
 		EnableRSS:         enableRSS,
 		HideCollections:   hideCollections,
-		Role:              role,
+		Roles:             roles,
 	}
 
 	// Bodge default avatar + header in,
@@ -389,6 +389,56 @@ func (c *Converter) accountToAPIAccountPublic(ctx context.Context, a *gtsmodel.A
 	c.ensureHeader(accountFrontend)
 
 	return accountFrontend, nil
+}
+
+// UserToAPIAccountDisplayRole returns the API representation of a user's display role.
+// This will accept a nil user but does not always return a value:
+// the default "user" role is considered uninteresting and not returned.
+func (c *Converter) UserToAPIAccountDisplayRole(user *gtsmodel.User) *apimodel.AccountDisplayRole {
+	switch {
+	case user == nil:
+		return nil
+	case *user.Admin:
+		return &apimodel.AccountDisplayRole{
+			ID:   string(apimodel.AccountRoleAdmin),
+			Name: apimodel.AccountRoleAdmin,
+		}
+	case *user.Moderator:
+		return &apimodel.AccountDisplayRole{
+			ID:   string(apimodel.AccountRoleModerator),
+			Name: apimodel.AccountRoleModerator,
+		}
+	default:
+		return nil
+	}
+}
+
+// APIAccountDisplayRoleToAPIAccountRoleSensitive returns the API representation of a user's role,
+// with permission bitmap. This will accept a nil display role and always returns a value.
+func (c *Converter) APIAccountDisplayRoleToAPIAccountRoleSensitive(display *apimodel.AccountDisplayRole) *apimodel.AccountRole {
+	// Default to user role.
+	role := &apimodel.AccountRole{
+		AccountDisplayRole: apimodel.AccountDisplayRole{
+			ID:   string(apimodel.AccountRoleUser),
+			Name: apimodel.AccountRoleUser,
+		},
+		Permissions: apimodel.AccountRolePermissionsNone,
+		Highlighted: false,
+	}
+
+	// If there's a display role, use that instead.
+	if display != nil {
+		role.AccountDisplayRole = *display
+		role.Highlighted = true
+		switch display.Name {
+		case apimodel.AccountRoleAdmin:
+			role.Permissions = apimodel.AccountRolePermissionsForAdminRole
+		case apimodel.AccountRoleModerator:
+			role.Permissions = apimodel.AccountRolePermissionsForModeratorRole
+		}
+	}
+
+	return role
 }
 
 func (c *Converter) fieldsToAPIFields(f []*gtsmodel.Field) []apimodel.Field {
@@ -416,8 +466,8 @@ func (c *Converter) fieldsToAPIFields(f []*gtsmodel.Field) []apimodel.Field {
 // when someone wants to view an account they've blocked.
 func (c *Converter) AccountToAPIAccountBlocked(ctx context.Context, a *gtsmodel.Account) (*apimodel.Account, error) {
 	var (
-		acct string
-		role *apimodel.AccountRole
+		acct  string
+		roles []apimodel.AccountDisplayRole
 	)
 
 	if a.IsRemote() {
@@ -438,14 +488,8 @@ func (c *Converter) AccountToAPIAccountBlocked(ctx context.Context, a *gtsmodel.
 			if err != nil {
 				return nil, gtserror.Newf("error getting user from database for account id %s: %w", a.ID, err)
 			}
-
-			switch {
-			case *user.Admin:
-				role = &apimodel.AccountRole{Name: apimodel.AccountRoleAdmin}
-			case *user.Moderator:
-				role = &apimodel.AccountRole{Name: apimodel.AccountRoleModerator}
-			default:
-				role = &apimodel.AccountRole{Name: apimodel.AccountRoleUser}
+			if role := c.UserToAPIAccountDisplayRole(user); role != nil {
+				roles = append(roles, *role)
 			}
 		}
 
@@ -464,7 +508,7 @@ func (c *Converter) AccountToAPIAccountBlocked(ctx context.Context, a *gtsmodel.
 		// Empty array (not nillable).
 		Fields:    make([]apimodel.Field, 0),
 		Suspended: !a.SuspendedAt.IsZero(),
-		Role:      role,
+		Roles:     roles,
 	}
 
 	// Don't show the account's actual
@@ -487,7 +531,7 @@ func (c *Converter) AccountToAdminAPIAccount(ctx context.Context, a *gtsmodel.Ac
 		inviteRequest          *string
 		approved               bool
 		disabled               bool
-		role                   = apimodel.AccountRole{Name: apimodel.AccountRoleUser} // assume user by default
+		role                   = *c.APIAccountDisplayRoleToAPIAccountRoleSensitive(nil)
 		createdByApplicationID string
 	)
 
@@ -527,11 +571,9 @@ func (c *Converter) AccountToAdminAPIAccount(ctx context.Context, a *gtsmodel.Ac
 			inviteRequest = &user.Reason
 		}
 
-		if *user.Admin {
-			role.Name = apimodel.AccountRoleAdmin
-		} else if *user.Moderator {
-			role.Name = apimodel.AccountRoleModerator
-		}
+		role = *c.APIAccountDisplayRoleToAPIAccountRoleSensitive(
+			c.UserToAPIAccountDisplayRole(user),
+		)
 
 		confirmed = !user.ConfirmedAt.IsZero()
 		approved = *user.Approved
@@ -740,7 +782,8 @@ func (c *Converter) EmojiCategoryToAPIEmojiCategory(ctx context.Context, categor
 
 // TagToAPITag converts a gts model tag into its api (frontend) representation for serialization on the API.
 // If stubHistory is set to 'true', then the 'history' field of the tag will be populated with a pointer to an empty slice, for API compatibility reasons.
-func (c *Converter) TagToAPITag(ctx context.Context, t *gtsmodel.Tag, stubHistory bool) (apimodel.Tag, error) {
+// following is an optional flag marking whether the currently authenticated user (if there is one) is following the tag.
+func (c *Converter) TagToAPITag(ctx context.Context, t *gtsmodel.Tag, stubHistory bool, following *bool) (apimodel.Tag, error) {
 	return apimodel.Tag{
 		Name: strings.ToLower(t.Name),
 		URL:  uris.URIForTag(t.Name),
@@ -752,7 +795,7 @@ func (c *Converter) TagToAPITag(ctx context.Context, t *gtsmodel.Tag, stubHistor
 			h := make([]any, 0)
 			return &h
 		}(),
-		Following: t.Following,
+		Following: following,
 	}, nil
 }
 
@@ -855,6 +898,7 @@ func (c *Converter) statusToAPIFilterResults(
 	for _, mention := range s.Mentions {
 		otherAccounts = append(otherAccounts, mention.TargetAccount)
 	}
+
 	// If there are no other accounts, skip this check.
 	if len(otherAccounts) > 0 {
 		// Start by assuming that they're all invisible or muted.
@@ -1290,6 +1334,7 @@ func (c *Converter) baseStatusToFrontend(
 		Sensitive:          *s.Sensitive,
 		SpoilerText:        s.ContentWarning,
 		Visibility:         c.VisToAPIVis(ctx, s.Visibility),
+		LocalOnly:          s.IsLocalOnly(),
 		Language:           nil, // Set below.
 		URI:                s.URI,
 		URL:                s.URL,
@@ -2349,7 +2394,7 @@ func (c *Converter) convertTagsToAPITags(ctx context.Context, tags []*gtsmodel.T
 
 	// Convert GTS models to frontend models
 	for _, tag := range tags {
-		apiTag, err := c.TagToAPITag(ctx, tag, false)
+		apiTag, err := c.TagToAPITag(ctx, tag, false, nil)
 		if err != nil {
 			errs.Appendf("error converting tag %s to api tag: %w", tag.ID, err)
 			continue
@@ -2548,4 +2593,75 @@ func policyValsToAPIPolicyVals(vals gtsmodel.PolicyValues) []apimodel.PolicyValu
 	}
 
 	return apiVals
+}
+
+// InteractionReqToAPIInteractionReq converts the given *gtsmodel.InteractionRequest
+// to an *apimodel.InteractionRequest, from the perspective of requestingAcct.
+func (c *Converter) InteractionReqToAPIInteractionReq(
+	ctx context.Context,
+	req *gtsmodel.InteractionRequest,
+	requestingAcct *gtsmodel.Account,
+) (*apimodel.InteractionRequest, error) {
+	// Ensure interaction request is populated.
+	if err := c.state.DB.PopulateInteractionRequest(ctx, req); err != nil {
+		err := gtserror.Newf("error populating: %w", err)
+		return nil, err
+	}
+
+	interactingAcct, err := c.AccountToAPIAccountPublic(ctx, req.InteractingAccount)
+	if err != nil {
+		err := gtserror.Newf("error converting interacting acct: %w", err)
+		return nil, err
+	}
+
+	interactedStatus, err := c.StatusToAPIStatus(
+		ctx,
+		req.Status,
+		requestingAcct,
+		statusfilter.FilterContextNone,
+		nil,
+		nil,
+	)
+	if err != nil {
+		err := gtserror.Newf("error converting interacted status: %w", err)
+		return nil, err
+	}
+
+	var reply *apimodel.Status
+	if req.InteractionType == gtsmodel.InteractionReply {
+		reply, err = c.StatusToAPIStatus(
+			ctx,
+			req.Reply,
+			requestingAcct,
+			statusfilter.FilterContextNone,
+			nil,
+			nil,
+		)
+		if err != nil {
+			err := gtserror.Newf("error converting reply: %w", err)
+			return nil, err
+		}
+	}
+
+	var acceptedAt string
+	if req.IsAccepted() {
+		acceptedAt = util.FormatISO8601(req.AcceptedAt)
+	}
+
+	var rejectedAt string
+	if req.IsRejected() {
+		rejectedAt = util.FormatISO8601(req.RejectedAt)
+	}
+
+	return &apimodel.InteractionRequest{
+		ID:         req.ID,
+		Type:       req.InteractionType.String(),
+		CreatedAt:  util.FormatISO8601(req.CreatedAt),
+		Account:    interactingAcct,
+		Status:     interactedStatus,
+		Reply:      reply,
+		AcceptedAt: acceptedAt,
+		RejectedAt: rejectedAt,
+		URI:        req.URI,
+	}, nil
 }

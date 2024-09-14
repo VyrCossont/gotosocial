@@ -48,6 +48,7 @@ type DB interface {
 	Rule
 	Search
 	Session
+	SinBinStatus
 	Status
 	StatusBookmark
 	StatusFave
@@ -56,4 +57,5 @@ type DB interface {
 	Timeline
 	User
 	Tombstone
+	WorkerTask
 }

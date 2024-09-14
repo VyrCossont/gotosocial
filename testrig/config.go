@@ -19,6 +19,7 @@ package testrig
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -34,11 +35,13 @@ func init() {
 	ctx := context.Background()
 
 	// Ensure global ffmpeg WASM pool initialized.
+	fmt.Println("testrig: precompiling ffmpeg WASM")
 	if err := ffmpeg.InitFfmpeg(ctx, 1); err != nil {
 		panic(err)
 	}
 
 	// Ensure global ffmpeg WASM pool initialized.
+	fmt.Println("testrig: precompiling ffprobe WASM")
 	if err := ffmpeg.InitFfprobe(ctx, 1); err != nil {
 		panic(err)
 	}
@@ -151,7 +154,7 @@ func testDefaults() config.Configuration {
 		TracingTransport:         "grpc",
 		TracingInsecureTransport: true,
 
-		MetricsEnabled:     false,
+		MetricsEnabled:     true,
 		MetricsAuthEnabled: false,
 
 		SyslogEnabled:  false,

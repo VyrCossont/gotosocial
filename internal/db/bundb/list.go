@@ -106,6 +106,14 @@ func (l *listDB) GetListsForAccountID(ctx context.Context, accountID string) ([]
 	return l.GetListsByIDs(ctx, listIDs)
 }
 
+func (l *listDB) CountListsForAccountID(ctx context.Context, accountID string) (int, error) {
+	return l.db.
+		NewSelect().
+		Table("lists").
+		Where("? = ?", bun.Ident("account_id"), accountID).
+		Count(ctx)
+}
+
 func (l *listDB) PopulateList(ctx context.Context, list *gtsmodel.List) error {
 	var (
 		err  error
@@ -345,8 +353,15 @@ func (l *listDB) GetListsByIDs(ctx context.Context, ids []string) ([]*gtsmodel.L
 	lists, err := l.state.Caches.DB.List.LoadIDs("ID",
 		ids,
 		func(uncached []string) ([]*gtsmodel.List, error) {
+			// Avoid querying
+			// if none uncached.
+			count := len(uncached)
+			if count == 0 {
+				return nil, nil
+			}
+
 			// Preallocate expected length of uncached lists.
-			lists := make([]*gtsmodel.List, 0, len(uncached))
+			lists := make([]*gtsmodel.List, 0, count)
 
 			// Perform database query scanning
 			// the remaining (uncached) IDs.
@@ -392,8 +407,15 @@ func (l *listDB) GetListEntriesByIDs(ctx context.Context, ids []string) ([]*gtsm
 	entries, err := l.state.Caches.DB.ListEntry.LoadIDs("ID",
 		ids,
 		func(uncached []string) ([]*gtsmodel.ListEntry, error) {
+			// Avoid querying
+			// if none uncached.
+			count := len(uncached)
+			if count == 0 {
+				return nil, nil
+			}
+
 			// Preallocate expected length of uncached entries.
-			entries := make([]*gtsmodel.ListEntry, 0, len(uncached))
+			entries := make([]*gtsmodel.ListEntry, 0, count)
 
 			// Perform database query scanning
 			// the remaining (uncached) IDs.
