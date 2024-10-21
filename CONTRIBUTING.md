@@ -195,7 +195,7 @@ Then install Node and Yarn as described in [Stylesheet / Web dev](#stylesheet--w
 Finally, to create a snapshot build, do:
 
 ```bash
-goreleaser --rm-dist --snapshot
+goreleaser release --clean --snapshot
 ```
 
 If all goes according to plan, you should now have a number of multiple-architecture binaries and tars inside the `./dist` folder, and snapshot Docker images should be built (check your terminal output for version).
@@ -385,7 +385,7 @@ We use [golangci-lint](https://golangci-lint.run/) for linting, which allows us 
 
 If you make a PR that doesn't pass the linter, it will be rejected. As such, it's good practice to run the linter locally before pushing or opening a PR.
 
-To do this, first install the linter following the instructions [here](https://golangci-lint.run/usage/install/#local-installation).
+To do this, first install the linter following the instructions [here](https://golangci-lint.run/welcome/install/).
 
 Then, you can run the linter with:
 

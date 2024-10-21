@@ -19,12 +19,12 @@ package status
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 
 	apimodel "github.com/superseriousbusiness/gotosocial/internal/api/model"
 	statusfilter "github.com/superseriousbusiness/gotosocial/internal/filter/status"
-	"github.com/superseriousbusiness/gotosocial/internal/filter/usermute"
 	"github.com/superseriousbusiness/gotosocial/internal/gtscontext"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
@@ -308,22 +308,7 @@ func (p *Processor) ContextGet(
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
-	convert := func(
-		ctx context.Context,
-		status *gtsmodel.Status,
-		requestingAccount *gtsmodel.Account,
-	) (*apimodel.Status, error) {
-		return p.converter.StatusToAPIStatus(
-			ctx,
-			status,
-			requestingAccount,
-			statusfilter.FilterContextThread,
-			filters,
-			usermute.NewCompiledUserMuteList(mutes),
-		)
-	}
-
-	// Retrieve the thread context.
+	// Retrieve the full thread context.
 	threadContext, errWithCode := p.contextGet(
 		ctx,
 		requester,
@@ -333,34 +318,27 @@ func (p *Processor) ContextGet(
 		return nil, errWithCode
 	}
 
-	apiContext := &apimodel.ThreadContext{
-		Ancestors:   make([]apimodel.Status, 0, len(threadContext.ancestors)),
-		Descendants: make([]apimodel.Status, 0, len(threadContext.descendants)),
-	}
+	var apiContext apimodel.ThreadContext
 
-	// Convert ancestors + filter
-	// out ones that aren't visible.
-	for _, status := range threadContext.ancestors {
-		if v, err := p.visFilter.StatusVisible(ctx, requester, status); err == nil && v {
-			status, err := convert(ctx, status, requester)
-			if err == nil {
-				apiContext.Ancestors = append(apiContext.Ancestors, *status)
-			}
-		}
-	}
+	// Convert and filter the thread context ancestors.
+	apiContext.Ancestors = p.c.GetVisibleAPIStatuses(ctx,
+		requester,
+		threadContext.ancestors,
+		statusfilter.FilterContextThread,
+		filters,
+		mutes,
+	)
 
-	// Convert descendants + filter
-	// out ones that aren't visible.
-	for _, status := range threadContext.descendants {
-		if v, err := p.visFilter.StatusVisible(ctx, requester, status); err == nil && v {
-			status, err := convert(ctx, status, requester)
-			if err == nil {
-				apiContext.Descendants = append(apiContext.Descendants, *status)
-			}
-		}
-	}
+	// Convert and filter the thread context descendants
+	apiContext.Descendants = p.c.GetVisibleAPIStatuses(ctx,
+		requester,
+		threadContext.descendants,
+		statusfilter.FilterContextThread,
+		filters,
+		mutes,
+	)
 
-	return apiContext, nil
+	return &apiContext, nil
 }
 
 // WebContextGet is like ContextGet, but is explicitly
@@ -425,6 +403,10 @@ func (p *Processor) WebContextGet(
 		// We should mark the next **VISIBLE**
 		// reply as the first reply.
 		markNextVisibleAsFirstReply bool
+
+		// Map of statuses that didn't pass visi
+		// checks and won't be shown via the web.
+		hiddenStatuses = make(map[string]struct{})
 	)
 
 	for idx, status := range wholeThread {
@@ -450,11 +432,16 @@ func (p *Processor) WebContextGet(
 			}
 		}
 
-		// Ensure status is actually
-		// visible to just anyone, and
-		// hide / don't include it if not.
+		// Ensure status is actually visible to just
+		// anyone, and hide / don't include it if not.
+		//
+		// Include a check to see if the parent status
+		// is hidden; if so, we shouldn't show the child
+		// as it leads to weird-looking threading where
+		// a status seems to reply to nothing.
+		_, parentHidden := hiddenStatuses[status.InReplyToID]
 		v, err := p.visFilter.StatusVisible(ctx, nil, status)
-		if err != nil || !v {
+		if err != nil || !v || parentHidden {
 			if !inReplies {
 				// Main thread entry hidden.
 				wCtx.ThreadHidden++
@@ -462,12 +449,15 @@ func (p *Processor) WebContextGet(
 				// Reply hidden.
 				wCtx.ThreadRepliesHidden++
 			}
+
+			hiddenStatuses[status.ID] = struct{}{}
 			continue
 		}
 
 		// Prepare visible status to add to thread context.
 		webStatus, err := p.converter.StatusToWebStatus(ctx, status)
 		if err != nil {
+			hiddenStatuses[status.ID] = struct{}{}
 			continue
 		}
 
@@ -535,8 +525,16 @@ func (p *Processor) WebContextGet(
 		wCtx.ThreadLength = threadLength
 	}
 
-	// Jot down number of hidden posts so template doesn't have to do it.
+	// Jot down number of "main" thread entries shown.
 	wCtx.ThreadShown = wCtx.ThreadLength - wCtx.ThreadHidden
+
+	// If there's no posts visible in the
+	// "main" thread we shouldn't show replies
+	// via the web as that's just weird.
+	if wCtx.ThreadShown < 1 {
+		const text = "no statuses visible in main thread"
+		return nil, gtserror.NewErrorNotFound(errors.New(text))
+	}
 
 	// Mark the last "main" visible status.
 	wCtx.Statuses[wCtx.ThreadShown-1].ThreadLastMain = true
@@ -546,7 +544,7 @@ func (p *Processor) WebContextGet(
 	// part of the "main" thread.
 	wCtx.ThreadReplies = threadLength - wCtx.ThreadLength
 
-	// Jot down number of hidden replies so template doesn't have to do it.
+	// Jot down number of "replies" shown.
 	wCtx.ThreadRepliesShown = wCtx.ThreadReplies - wCtx.ThreadRepliesHidden
 
 	// Return the finished context.

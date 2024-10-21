@@ -18,6 +18,7 @@
 package typeutils_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"testing"
@@ -59,13 +60,15 @@ func (suite *InternalToFrontendTestSuite) TestAccountToFrontend() {
   "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
   "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
   "avatar_description": "a green goblin looking nasty",
+  "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
   "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
   "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
   "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+  "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
   "followers_count": 2,
   "following_count": 2,
   "statuses_count": 8,
-  "last_status_at": "2024-01-10T09:24:00.000Z",
+  "last_status_at": "2024-01-10",
   "emojis": [],
   "fields": [],
   "enable_rss": true
@@ -109,13 +112,15 @@ func (suite *InternalToFrontendTestSuite) TestAccountToFrontendAliasedAndMoved()
   "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
   "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
   "avatar_description": "a green goblin looking nasty",
+  "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
   "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
   "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
   "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+  "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
   "followers_count": 2,
   "following_count": 2,
   "statuses_count": 8,
-  "last_status_at": "2024-01-10T09:24:00.000Z",
+  "last_status_at": "2024-01-10",
   "emojis": [],
   "fields": [],
   "source": {
@@ -154,10 +159,11 @@ func (suite *InternalToFrontendTestSuite) TestAccountToFrontendAliasedAndMoved()
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 1,
     "following_count": 1,
     "statuses_count": 8,
-    "last_status_at": "2021-07-28T08:40:37.000Z",
+    "last_status_at": "2021-07-28",
     "emojis": [],
     "fields": [
       {
@@ -204,13 +210,15 @@ func (suite *InternalToFrontendTestSuite) TestAccountToFrontendWithEmojiStruct()
   "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
   "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
   "avatar_description": "a green goblin looking nasty",
+  "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
   "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
   "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
   "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+  "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
   "followers_count": 2,
   "following_count": 2,
   "statuses_count": 8,
-  "last_status_at": "2024-01-10T09:24:00.000Z",
+  "last_status_at": "2024-01-10",
   "emojis": [
     {
       "shortcode": "rainbow",
@@ -251,13 +259,15 @@ func (suite *InternalToFrontendTestSuite) TestAccountToFrontendWithEmojiIDs() {
   "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
   "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
   "avatar_description": "a green goblin looking nasty",
+  "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
   "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
   "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
   "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+  "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
   "followers_count": 2,
   "following_count": 2,
   "statuses_count": 8,
-  "last_status_at": "2024-01-10T09:24:00.000Z",
+  "last_status_at": "2024-01-10",
   "emojis": [
     {
       "shortcode": "rainbow",
@@ -294,13 +304,15 @@ func (suite *InternalToFrontendTestSuite) TestAccountToFrontendSensitive() {
   "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
   "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
   "avatar_description": "a green goblin looking nasty",
+  "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
   "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
   "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
   "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+  "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
   "followers_count": 2,
   "following_count": 2,
   "statuses_count": 8,
-  "last_status_at": "2024-01-10T09:24:00.000Z",
+  "last_status_at": "2024-01-10",
   "emojis": [],
   "fields": [],
   "source": {
@@ -351,6 +363,7 @@ func (suite *InternalToFrontendTestSuite) TestAccountToFrontendPublicPunycode() 
   "avatar_static": "",
   "header": "http://localhost:8080/assets/default_header.webp",
   "header_static": "http://localhost:8080/assets/default_header.webp",
+  "header_description": "Flat gray background (default header).",
   "followers_count": 0,
   "following_count": 0,
   "statuses_count": 0,
@@ -389,6 +402,7 @@ func (suite *InternalToFrontendTestSuite) TestLocalInstanceAccountToFrontendPubl
   "avatar_static": "",
   "header": "http://localhost:8080/assets/default_header.webp",
   "header_static": "http://localhost:8080/assets/default_header.webp",
+  "header_description": "Flat gray background (default header).",
   "followers_count": 0,
   "following_count": 0,
   "statuses_count": 0,
@@ -427,6 +441,7 @@ func (suite *InternalToFrontendTestSuite) TestLocalInstanceAccountToFrontendBloc
   "avatar_static": "",
   "header": "http://localhost:8080/assets/default_header.webp",
   "header_static": "http://localhost:8080/assets/default_header.webp",
+  "header_description": "Flat gray background (default header).",
   "followers_count": 0,
   "following_count": 0,
   "statuses_count": 0,
@@ -485,10 +500,11 @@ func (suite *InternalToFrontendTestSuite) TestStatusToFrontend() {
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 1,
     "following_count": 1,
     "statuses_count": 4,
-    "last_status_at": "2021-10-20T10:41:37.000Z",
+    "last_status_at": "2021-10-20",
     "emojis": [],
     "fields": [],
     "enable_rss": true,
@@ -662,10 +678,11 @@ func (suite *InternalToFrontendTestSuite) TestWarnFilteredStatusToFrontend() {
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 1,
     "following_count": 1,
     "statuses_count": 4,
-    "last_status_at": "2021-10-20T10:41:37.000Z",
+    "last_status_at": "2021-10-20",
     "emojis": [],
     "fields": [],
     "enable_rss": true,
@@ -846,13 +863,15 @@ func (suite *InternalToFrontendTestSuite) TestWarnFilteredBoostToFrontend() {
       "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
       "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
       "avatar_description": "a green goblin looking nasty",
+      "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
       "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
       "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
       "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+      "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
       "followers_count": 2,
       "following_count": 2,
       "statuses_count": 8,
-      "last_status_at": "2024-01-10T09:24:00.000Z",
+      "last_status_at": "2024-01-10",
       "emojis": [],
       "fields": [],
       "enable_rss": true
@@ -976,10 +995,11 @@ func (suite *InternalToFrontendTestSuite) TestWarnFilteredBoostToFrontend() {
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 1,
     "following_count": 1,
     "statuses_count": 4,
-    "last_status_at": "2021-10-20T10:41:37.000Z",
+    "last_status_at": "2021-10-20",
     "emojis": [],
     "fields": [],
     "enable_rss": true,
@@ -1063,15 +1083,21 @@ func (suite *InternalToFrontendTestSuite) TestHideFilteredBoostToFrontend() {
 
 // Test that a hashtag filter for a hashtag in Mastodon HTML content works the way most users would expect.
 func (suite *InternalToFrontendTestSuite) testHashtagFilteredStatusToFrontend(wholeWord bool, boost bool) {
-	testStatus := suite.testStatuses["admin_account_status_1"]
+	testStatus := new(gtsmodel.Status)
+	*testStatus = *suite.testStatuses["admin_account_status_1"]
 	testStatus.Content = `<p>doggo doggin' it</p><p><a href="https://example.test/tags/dogsofmastodon" class="mention hashtag" rel="tag nofollow noreferrer noopener" target="_blank">#<span>dogsofmastodon</span></a></p>`
 
 	if boost {
-		// Modify a fixture boost into a boost of the above status.
-		boostStatus := suite.testStatuses["admin_account_status_4"]
-		boostStatus.BoostOf = testStatus
-		boostStatus.BoostOfID = testStatus.ID
-		testStatus = boostStatus
+		boost, err := suite.typeconverter.StatusToBoost(
+			context.Background(),
+			testStatus,
+			suite.testAccounts["admin_account"],
+			"",
+		)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
+		testStatus = boost
 	}
 
 	requestingAccount := suite.testAccounts["local_account_1"]
@@ -1103,9 +1129,11 @@ func (suite *InternalToFrontendTestSuite) testHashtagFilteredStatusToFrontend(wh
 		[]*gtsmodel.Filter{filter},
 		nil,
 	)
-	if suite.NoError(err) {
-		suite.NotEmpty(apiStatus.Filtered)
+	if err != nil {
+		suite.FailNow(err.Error())
 	}
+
+	suite.NotEmpty(apiStatus.Filtered)
 }
 
 func (suite *InternalToFrontendTestSuite) TestHashtagWholeWordFilteredStatusToFrontend() {
@@ -1223,10 +1251,11 @@ func (suite *InternalToFrontendTestSuite) TestStatusToFrontendUnknownAttachments
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 0,
     "following_count": 0,
     "statuses_count": 1,
-    "last_status_at": "2023-11-02T10:44:25.000Z",
+    "last_status_at": "2023-11-02",
     "emojis": [],
     "fields": []
   },
@@ -1386,10 +1415,11 @@ func (suite *InternalToFrontendTestSuite) TestStatusToWebStatus() {
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 0,
     "following_count": 0,
     "statuses_count": 1,
-    "last_status_at": "2023-11-02T10:44:25.000Z",
+    "last_status_at": "2023-11-02",
     "emojis": [],
     "fields": []
   },
@@ -1518,10 +1548,11 @@ func (suite *InternalToFrontendTestSuite) TestStatusToFrontendUnknownLanguage() 
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 1,
     "following_count": 1,
     "statuses_count": 4,
-    "last_status_at": "2021-10-20T10:41:37.000Z",
+    "last_status_at": "2021-10-20",
     "emojis": [],
     "fields": [],
     "enable_rss": true,
@@ -1659,13 +1690,15 @@ func (suite *InternalToFrontendTestSuite) TestStatusToFrontendPartialInteraction
     "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
     "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
     "avatar_description": "a green goblin looking nasty",
+    "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
     "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
     "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
     "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+    "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
     "followers_count": 2,
     "following_count": 2,
     "statuses_count": 8,
-    "last_status_at": "2024-01-10T09:24:00.000Z",
+    "last_status_at": "2024-01-10",
     "emojis": [],
     "fields": [],
     "enable_rss": true
@@ -1698,6 +1731,131 @@ func (suite *InternalToFrontendTestSuite) TestStatusToFrontendPartialInteraction
     }
   }
 }`, string(b))
+}
+
+func (suite *InternalToFrontendTestSuite) TestStatusToAPIStatusPendingApproval() {
+	var (
+		testStatus        = suite.testStatuses["admin_account_status_5"]
+		requestingAccount = suite.testAccounts["local_account_2"]
+	)
+
+	apiStatus, err := suite.typeconverter.StatusToAPIStatus(
+		context.Background(),
+		testStatus,
+		requestingAccount,
+		statusfilter.FilterContextNone,
+		nil,
+		nil,
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// We want to see the HTML in
+	// the status so don't escape it.
+	out := new(bytes.Buffer)
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(apiStatus); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	suite.Equal(`{
+  "id": "01J5QVB9VC76NPPRQ207GG4DRZ",
+  "created_at": "2024-02-20T10:41:37.000Z",
+  "in_reply_to_id": "01F8MHC8VWDRBQR0N1BATDDEM5",
+  "in_reply_to_account_id": "01F8MH5NBDF2MV7CTC4Q5128HF",
+  "sensitive": false,
+  "spoiler_text": "",
+  "visibility": "public",
+  "language": null,
+  "uri": "http://localhost:8080/users/admin/statuses/01J5QVB9VC76NPPRQ207GG4DRZ",
+  "url": "http://localhost:8080/@admin/statuses/01J5QVB9VC76NPPRQ207GG4DRZ",
+  "replies_count": 0,
+  "reblogs_count": 0,
+  "favourites_count": 0,
+  "favourited": false,
+  "reblogged": false,
+  "muted": false,
+  "bookmarked": false,
+  "pinned": false,
+  "content": "<p>Hi <span class=\"h-card\"><a href=\"http://localhost:8080/@1happyturtle\" class=\"u-url mention\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">@<span>1happyturtle</span></a></span>, can I reply?</p><hr><p><i lang=\"en\">ℹ️ Note from localhost:8080: This reply is pending your approval. You can quickly accept it by liking, boosting or replying to it. You can also accept or reject it at the following link: <a href=\"http://localhost:8080/settings/user/interaction_requests/01J5QVXCCEATJYSXM9H6MZT4JR\" rel=\"noreferrer noopener nofollow\" target=\"_blank\">http://localhost:8080/settings/user/interaction_requests/01J5QVXCCEATJYSXM9H6MZT4JR</a>.</i></p>",
+  "reblog": null,
+  "application": {
+    "name": "superseriousbusiness",
+    "website": "https://superserious.business"
+  },
+  "account": {
+    "id": "01F8MH17FWEB39HZJ76B6VXSKF",
+    "username": "admin",
+    "acct": "admin",
+    "display_name": "",
+    "locked": false,
+    "discoverable": true,
+    "bot": false,
+    "created_at": "2022-05-17T13:10:59.000Z",
+    "note": "",
+    "url": "http://localhost:8080/@admin",
+    "avatar": "",
+    "avatar_static": "",
+    "header": "http://localhost:8080/assets/default_header.webp",
+    "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
+    "followers_count": 1,
+    "following_count": 1,
+    "statuses_count": 4,
+    "last_status_at": "2021-10-20",
+    "emojis": [],
+    "fields": [],
+    "enable_rss": true,
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
+  },
+  "media_attachments": [],
+  "mentions": [
+    {
+      "id": "01F8MH5NBDF2MV7CTC4Q5128HF",
+      "username": "1happyturtle",
+      "url": "http://localhost:8080/@1happyturtle",
+      "acct": "1happyturtle"
+    }
+  ],
+  "tags": [],
+  "emojis": [],
+  "card": null,
+  "poll": null,
+  "text": "Hi @1happyturtle, can I reply?",
+  "interaction_policy": {
+    "can_favourite": {
+      "always": [
+        "public",
+        "me"
+      ],
+      "with_approval": []
+    },
+    "can_reply": {
+      "always": [
+        "public",
+        "me"
+      ],
+      "with_approval": []
+    },
+    "can_reblog": {
+      "always": [
+        "public",
+        "me"
+      ],
+      "with_approval": []
+    }
+  }
+}
+`, out.String())
 }
 
 func (suite *InternalToFrontendTestSuite) TestVideoAttachmentToFrontend() {
@@ -1854,10 +2012,11 @@ func (suite *InternalToFrontendTestSuite) TestInstanceV1ToFrontend() {
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 1,
     "following_count": 1,
     "statuses_count": 4,
-    "last_status_at": "2021-10-20T10:41:37.000Z",
+    "last_status_at": "2021-10-20",
     "emojis": [],
     "fields": [],
     "enable_rss": true,
@@ -1994,10 +2153,11 @@ func (suite *InternalToFrontendTestSuite) TestInstanceV2ToFrontend() {
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 1,
       "following_count": 1,
       "statuses_count": 4,
-      "last_status_at": "2021-10-20T10:41:37.000Z",
+      "last_status_at": "2021-10-20",
       "emojis": [],
       "fields": [],
       "enable_rss": true,
@@ -2114,10 +2274,11 @@ func (suite *InternalToFrontendTestSuite) TestReportToFrontend1() {
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 0,
     "following_count": 0,
     "statuses_count": 3,
-    "last_status_at": "2021-09-11T09:40:37.000Z",
+    "last_status_at": "2021-09-11",
     "emojis": [],
     "fields": []
   }
@@ -2157,10 +2318,11 @@ func (suite *InternalToFrontendTestSuite) TestReportToFrontend2() {
     "avatar_static": "",
     "header": "http://localhost:8080/assets/default_header.webp",
     "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
     "followers_count": 1,
     "following_count": 1,
     "statuses_count": 8,
-    "last_status_at": "2021-07-28T08:40:37.000Z",
+    "last_status_at": "2021-07-28",
     "emojis": [],
     "fields": [
       {
@@ -2233,10 +2395,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontend1() {
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 0,
       "following_count": 0,
       "statuses_count": 3,
-      "last_status_at": "2021-09-11T09:40:37.000Z",
+      "last_status_at": "2021-09-11",
       "emojis": [],
       "fields": []
     }
@@ -2278,10 +2441,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontend1() {
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 1,
       "following_count": 1,
       "statuses_count": 8,
-      "last_status_at": "2021-07-28T08:40:37.000Z",
+      "last_status_at": "2021-07-28",
       "emojis": [],
       "fields": [
         {
@@ -2336,10 +2500,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontend1() {
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 1,
       "following_count": 1,
       "statuses_count": 4,
-      "last_status_at": "2021-10-20T10:41:37.000Z",
+      "last_status_at": "2021-10-20",
       "emojis": [],
       "fields": [],
       "enable_rss": true,
@@ -2390,10 +2555,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontend1() {
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 1,
       "following_count": 1,
       "statuses_count": 4,
-      "last_status_at": "2021-10-20T10:41:37.000Z",
+      "last_status_at": "2021-10-20",
       "emojis": [],
       "fields": [],
       "enable_rss": true,
@@ -2467,10 +2633,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontend2() {
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 1,
       "following_count": 1,
       "statuses_count": 8,
-      "last_status_at": "2021-07-28T08:40:37.000Z",
+      "last_status_at": "2021-07-28",
       "emojis": [],
       "fields": [
         {
@@ -2525,10 +2692,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontend2() {
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 0,
       "following_count": 0,
       "statuses_count": 3,
-      "last_status_at": "2021-09-11T09:40:37.000Z",
+      "last_status_at": "2021-09-11",
       "emojis": [],
       "fields": []
     }
@@ -2572,10 +2740,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontend2() {
         "avatar_static": "",
         "header": "http://localhost:8080/assets/default_header.webp",
         "header_static": "http://localhost:8080/assets/default_header.webp",
+        "header_description": "Flat gray background (default header).",
         "followers_count": 0,
         "following_count": 0,
         "statuses_count": 3,
-        "last_status_at": "2021-09-11T09:40:37.000Z",
+        "last_status_at": "2021-09-11",
         "emojis": [],
         "fields": []
       },
@@ -2730,10 +2899,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontendSuspendedLoca
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 0,
       "following_count": 0,
       "statuses_count": 3,
-      "last_status_at": "2021-09-11T09:40:37.000Z",
+      "last_status_at": "2021-09-11",
       "emojis": [],
       "fields": []
     }
@@ -2775,6 +2945,7 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontendSuspendedLoca
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 0,
       "following_count": 0,
       "statuses_count": 0,
@@ -2822,10 +2993,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontendSuspendedLoca
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 1,
       "following_count": 1,
       "statuses_count": 4,
-      "last_status_at": "2021-10-20T10:41:37.000Z",
+      "last_status_at": "2021-10-20",
       "emojis": [],
       "fields": [],
       "enable_rss": true,
@@ -2876,10 +3048,11 @@ func (suite *InternalToFrontendTestSuite) TestAdminReportToFrontendSuspendedLoca
       "avatar_static": "",
       "header": "http://localhost:8080/assets/default_header.webp",
       "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
       "followers_count": 1,
       "following_count": 1,
       "statuses_count": 4,
-      "last_status_at": "2021-10-20T10:41:37.000Z",
+      "last_status_at": "2021-10-20",
       "emojis": [],
       "fields": [],
       "enable_rss": true,
@@ -2984,6 +3157,569 @@ func (suite *InternalToFrontendTestSuite) TestRelationshipFollowRequested() {
   "domain_blocking": false,
   "endorsed": false,
   "note": ""
+}`, string(b))
+}
+
+func (suite *InternalToFrontendTestSuite) TestIntReqToAPI() {
+	requestingAccount := suite.testAccounts["local_account_2"]
+	adminReport, err := suite.typeconverter.InteractionReqToAPIInteractionReq(
+		context.Background(),
+		suite.testInteractionRequests["admin_account_reply_turtle"],
+		requestingAccount,
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	b, err := json.MarshalIndent(adminReport, "", "  ")
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	suite.Equal(`{
+  "id": "01J5QVXCCEATJYSXM9H6MZT4JR",
+  "type": "reply",
+  "created_at": "2024-02-20T10:41:37.000Z",
+  "account": {
+    "id": "01F8MH17FWEB39HZJ76B6VXSKF",
+    "username": "admin",
+    "acct": "admin",
+    "display_name": "",
+    "locked": false,
+    "discoverable": true,
+    "bot": false,
+    "created_at": "2022-05-17T13:10:59.000Z",
+    "note": "",
+    "url": "http://localhost:8080/@admin",
+    "avatar": "",
+    "avatar_static": "",
+    "header": "http://localhost:8080/assets/default_header.webp",
+    "header_static": "http://localhost:8080/assets/default_header.webp",
+    "header_description": "Flat gray background (default header).",
+    "followers_count": 1,
+    "following_count": 1,
+    "statuses_count": 4,
+    "last_status_at": "2021-10-20",
+    "emojis": [],
+    "fields": [],
+    "enable_rss": true,
+    "roles": [
+      {
+        "id": "admin",
+        "name": "admin",
+        "color": ""
+      }
+    ]
+  },
+  "status": {
+    "id": "01F8MHC8VWDRBQR0N1BATDDEM5",
+    "created_at": "2021-10-20T10:40:37.000Z",
+    "in_reply_to_id": null,
+    "in_reply_to_account_id": null,
+    "sensitive": true,
+    "spoiler_text": "you won't be able to reply to this without my approval",
+    "visibility": "public",
+    "language": "en",
+    "uri": "http://localhost:8080/users/1happyturtle/statuses/01F8MHC8VWDRBQR0N1BATDDEM5",
+    "url": "http://localhost:8080/@1happyturtle/statuses/01F8MHC8VWDRBQR0N1BATDDEM5",
+    "replies_count": 1,
+    "reblogs_count": 0,
+    "favourites_count": 0,
+    "favourited": false,
+    "reblogged": false,
+    "muted": false,
+    "bookmarked": false,
+    "pinned": false,
+    "content": "🐢 i don't mind people sharing and liking this one but I want to moderate replies to it 🐢",
+    "reblog": null,
+    "application": {
+      "name": "kindaweird",
+      "website": "https://kindaweird.app"
+    },
+    "account": {
+      "id": "01F8MH5NBDF2MV7CTC4Q5128HF",
+      "username": "1happyturtle",
+      "acct": "1happyturtle",
+      "display_name": "happy little turtle :3",
+      "locked": true,
+      "discoverable": false,
+      "bot": false,
+      "created_at": "2022-06-04T13:12:00.000Z",
+      "note": "\u003cp\u003ei post about things that concern me\u003c/p\u003e",
+      "url": "http://localhost:8080/@1happyturtle",
+      "avatar": "",
+      "avatar_static": "",
+      "header": "http://localhost:8080/assets/default_header.webp",
+      "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
+      "followers_count": 1,
+      "following_count": 1,
+      "statuses_count": 8,
+      "last_status_at": "2021-07-28",
+      "emojis": [],
+      "fields": [
+        {
+          "name": "should you follow me?",
+          "value": "maybe!",
+          "verified_at": null
+        },
+        {
+          "name": "age",
+          "value": "120",
+          "verified_at": null
+        }
+      ],
+      "hide_collections": true
+    },
+    "media_attachments": [],
+    "mentions": [],
+    "tags": [],
+    "emojis": [],
+    "card": null,
+    "poll": null,
+    "text": "🐢 i don't mind people sharing and liking this one but I want to moderate replies to it 🐢",
+    "interaction_policy": {
+      "can_favourite": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      },
+      "can_reply": {
+        "always": [
+          "author",
+          "me"
+        ],
+        "with_approval": [
+          "public"
+        ]
+      },
+      "can_reblog": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      }
+    }
+  },
+  "reply": {
+    "id": "01J5QVB9VC76NPPRQ207GG4DRZ",
+    "created_at": "2024-02-20T10:41:37.000Z",
+    "in_reply_to_id": "01F8MHC8VWDRBQR0N1BATDDEM5",
+    "in_reply_to_account_id": "01F8MH5NBDF2MV7CTC4Q5128HF",
+    "sensitive": false,
+    "spoiler_text": "",
+    "visibility": "public",
+    "language": null,
+    "uri": "http://localhost:8080/users/admin/statuses/01J5QVB9VC76NPPRQ207GG4DRZ",
+    "url": "http://localhost:8080/@admin/statuses/01J5QVB9VC76NPPRQ207GG4DRZ",
+    "replies_count": 0,
+    "reblogs_count": 0,
+    "favourites_count": 0,
+    "favourited": false,
+    "reblogged": false,
+    "muted": false,
+    "bookmarked": false,
+    "pinned": false,
+    "content": "\u003cp\u003eHi \u003cspan class=\"h-card\"\u003e\u003ca href=\"http://localhost:8080/@1happyturtle\" class=\"u-url mention\" rel=\"nofollow noreferrer noopener\" target=\"_blank\"\u003e@\u003cspan\u003e1happyturtle\u003c/span\u003e\u003c/a\u003e\u003c/span\u003e, can I reply?\u003c/p\u003e",
+    "reblog": null,
+    "application": {
+      "name": "superseriousbusiness",
+      "website": "https://superserious.business"
+    },
+    "account": {
+      "id": "01F8MH17FWEB39HZJ76B6VXSKF",
+      "username": "admin",
+      "acct": "admin",
+      "display_name": "",
+      "locked": false,
+      "discoverable": true,
+      "bot": false,
+      "created_at": "2022-05-17T13:10:59.000Z",
+      "note": "",
+      "url": "http://localhost:8080/@admin",
+      "avatar": "",
+      "avatar_static": "",
+      "header": "http://localhost:8080/assets/default_header.webp",
+      "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
+      "followers_count": 1,
+      "following_count": 1,
+      "statuses_count": 4,
+      "last_status_at": "2021-10-20",
+      "emojis": [],
+      "fields": [],
+      "enable_rss": true,
+      "roles": [
+        {
+          "id": "admin",
+          "name": "admin",
+          "color": ""
+        }
+      ]
+    },
+    "media_attachments": [],
+    "mentions": [
+      {
+        "id": "01F8MH5NBDF2MV7CTC4Q5128HF",
+        "username": "1happyturtle",
+        "url": "http://localhost:8080/@1happyturtle",
+        "acct": "1happyturtle"
+      }
+    ],
+    "tags": [],
+    "emojis": [],
+    "card": null,
+    "poll": null,
+    "text": "Hi @1happyturtle, can I reply?",
+    "interaction_policy": {
+      "can_favourite": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      },
+      "can_reply": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      },
+      "can_reblog": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      }
+    }
+  }
+}`, string(b))
+}
+
+func (suite *InternalToFrontendTestSuite) TestConversationToAPISelfConvo() {
+	var (
+		ctx                                       = context.Background()
+		requester                                 = suite.testAccounts["local_account_1"]
+		lastStatus                                = suite.testStatuses["local_account_1_status_1"]
+		filters    []*gtsmodel.Filter             = nil
+		mutes      *usermute.CompiledUserMuteList = nil
+	)
+
+	convo := &gtsmodel.Conversation{
+		ID:            "01J9C6K86PKZ5GY5WXV94DGH6R",
+		CreatedAt:     testrig.TimeMustParse("2022-06-10T15:22:08Z"),
+		UpdatedAt:     testrig.TimeMustParse("2022-06-10T15:22:08Z"),
+		AccountID:     requester.ID,
+		Account:       requester,
+		OtherAccounts: nil,
+		LastStatus:    lastStatus,
+		Read:          util.Ptr(true),
+	}
+
+	apiConvo, err := suite.typeconverter.ConversationToAPIConversation(
+		ctx,
+		convo,
+		requester,
+		filters,
+		mutes,
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	b, err := json.MarshalIndent(apiConvo, "", "  ")
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// No other accounts involved, so we should only
+	// have our own account in the "accounts" field.
+	suite.Equal(`{
+  "id": "01J9C6K86PKZ5GY5WXV94DGH6R",
+  "unread": false,
+  "accounts": [
+    {
+      "id": "01F8MH1H7YV1Z7D2C8K2730QBF",
+      "username": "the_mighty_zork",
+      "acct": "the_mighty_zork",
+      "display_name": "original zork (he/they)",
+      "locked": false,
+      "discoverable": true,
+      "bot": false,
+      "created_at": "2022-05-20T11:09:18.000Z",
+      "note": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
+      "url": "http://localhost:8080/@the_mighty_zork",
+      "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
+      "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
+      "avatar_description": "a green goblin looking nasty",
+      "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
+      "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
+      "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
+      "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+      "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
+      "followers_count": 2,
+      "following_count": 2,
+      "statuses_count": 8,
+      "last_status_at": "2024-01-10",
+      "emojis": [],
+      "fields": [],
+      "enable_rss": true
+    }
+  ],
+  "last_status": {
+    "id": "01F8MHAMCHF6Y650WCRSCP4WMY",
+    "created_at": "2021-10-20T10:40:37.000Z",
+    "in_reply_to_id": null,
+    "in_reply_to_account_id": null,
+    "sensitive": true,
+    "spoiler_text": "introduction post",
+    "visibility": "public",
+    "language": "en",
+    "uri": "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
+    "url": "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
+    "replies_count": 2,
+    "reblogs_count": 1,
+    "favourites_count": 1,
+    "favourited": false,
+    "reblogged": false,
+    "muted": false,
+    "bookmarked": false,
+    "pinned": false,
+    "content": "hello everyone!",
+    "reblog": null,
+    "application": {
+      "name": "really cool gts application",
+      "website": "https://reallycool.app"
+    },
+    "account": {
+      "id": "01F8MH1H7YV1Z7D2C8K2730QBF",
+      "username": "the_mighty_zork",
+      "acct": "the_mighty_zork",
+      "display_name": "original zork (he/they)",
+      "locked": false,
+      "discoverable": true,
+      "bot": false,
+      "created_at": "2022-05-20T11:09:18.000Z",
+      "note": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
+      "url": "http://localhost:8080/@the_mighty_zork",
+      "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
+      "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
+      "avatar_description": "a green goblin looking nasty",
+      "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
+      "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
+      "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
+      "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+      "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
+      "followers_count": 2,
+      "following_count": 2,
+      "statuses_count": 8,
+      "last_status_at": "2024-01-10",
+      "emojis": [],
+      "fields": [],
+      "enable_rss": true
+    },
+    "media_attachments": [],
+    "mentions": [],
+    "tags": [],
+    "emojis": [],
+    "card": null,
+    "poll": null,
+    "text": "hello everyone!",
+    "interaction_policy": {
+      "can_favourite": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      },
+      "can_reply": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      },
+      "can_reblog": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      }
+    }
+  }
+}`, string(b))
+}
+
+func (suite *InternalToFrontendTestSuite) TestConversationToAPI() {
+	var (
+		ctx                                       = context.Background()
+		requester                                 = suite.testAccounts["local_account_1"]
+		lastStatus                                = suite.testStatuses["local_account_1_status_1"]
+		filters    []*gtsmodel.Filter             = nil
+		mutes      *usermute.CompiledUserMuteList = nil
+	)
+
+	convo := &gtsmodel.Conversation{
+		ID:        "01J9C6K86PKZ5GY5WXV94DGH6R",
+		CreatedAt: testrig.TimeMustParse("2022-06-10T15:22:08Z"),
+		UpdatedAt: testrig.TimeMustParse("2022-06-10T15:22:08Z"),
+		AccountID: requester.ID,
+		Account:   requester,
+		OtherAccounts: []*gtsmodel.Account{
+			suite.testAccounts["local_account_2"],
+		},
+		LastStatus: lastStatus,
+		Read:       util.Ptr(false),
+	}
+
+	apiConvo, err := suite.typeconverter.ConversationToAPIConversation(
+		ctx,
+		convo,
+		requester,
+		filters,
+		mutes,
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	b, err := json.MarshalIndent(apiConvo, "", "  ")
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// One other account is involved, so they
+	// should in the "accounts" field and not us.
+	suite.Equal(`{
+  "id": "01J9C6K86PKZ5GY5WXV94DGH6R",
+  "unread": true,
+  "accounts": [
+    {
+      "id": "01F8MH5NBDF2MV7CTC4Q5128HF",
+      "username": "1happyturtle",
+      "acct": "1happyturtle",
+      "display_name": "happy little turtle :3",
+      "locked": true,
+      "discoverable": false,
+      "bot": false,
+      "created_at": "2022-06-04T13:12:00.000Z",
+      "note": "\u003cp\u003ei post about things that concern me\u003c/p\u003e",
+      "url": "http://localhost:8080/@1happyturtle",
+      "avatar": "",
+      "avatar_static": "",
+      "header": "http://localhost:8080/assets/default_header.webp",
+      "header_static": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
+      "followers_count": 1,
+      "following_count": 1,
+      "statuses_count": 8,
+      "last_status_at": "2021-07-28",
+      "emojis": [],
+      "fields": [
+        {
+          "name": "should you follow me?",
+          "value": "maybe!",
+          "verified_at": null
+        },
+        {
+          "name": "age",
+          "value": "120",
+          "verified_at": null
+        }
+      ],
+      "hide_collections": true
+    }
+  ],
+  "last_status": {
+    "id": "01F8MHAMCHF6Y650WCRSCP4WMY",
+    "created_at": "2021-10-20T10:40:37.000Z",
+    "in_reply_to_id": null,
+    "in_reply_to_account_id": null,
+    "sensitive": true,
+    "spoiler_text": "introduction post",
+    "visibility": "public",
+    "language": "en",
+    "uri": "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
+    "url": "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
+    "replies_count": 2,
+    "reblogs_count": 1,
+    "favourites_count": 1,
+    "favourited": false,
+    "reblogged": false,
+    "muted": false,
+    "bookmarked": false,
+    "pinned": false,
+    "content": "hello everyone!",
+    "reblog": null,
+    "application": {
+      "name": "really cool gts application",
+      "website": "https://reallycool.app"
+    },
+    "account": {
+      "id": "01F8MH1H7YV1Z7D2C8K2730QBF",
+      "username": "the_mighty_zork",
+      "acct": "the_mighty_zork",
+      "display_name": "original zork (he/they)",
+      "locked": false,
+      "discoverable": true,
+      "bot": false,
+      "created_at": "2022-05-20T11:09:18.000Z",
+      "note": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
+      "url": "http://localhost:8080/@the_mighty_zork",
+      "avatar": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/original/01F8MH58A357CV5K7R7TJMSH6S.jpg",
+      "avatar_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/avatar/small/01F8MH58A357CV5K7R7TJMSH6S.webp",
+      "avatar_description": "a green goblin looking nasty",
+      "avatar_media_id": "01F8MH58A357CV5K7R7TJMSH6S",
+      "header": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/original/01PFPMWK2FF0D9WMHEJHR07C3Q.jpg",
+      "header_static": "http://localhost:8080/fileserver/01F8MH1H7YV1Z7D2C8K2730QBF/header/small/01PFPMWK2FF0D9WMHEJHR07C3Q.webp",
+      "header_description": "A very old-school screenshot of the original team fortress mod for quake",
+      "header_media_id": "01PFPMWK2FF0D9WMHEJHR07C3Q",
+      "followers_count": 2,
+      "following_count": 2,
+      "statuses_count": 8,
+      "last_status_at": "2024-01-10",
+      "emojis": [],
+      "fields": [],
+      "enable_rss": true
+    },
+    "media_attachments": [],
+    "mentions": [],
+    "tags": [],
+    "emojis": [],
+    "card": null,
+    "poll": null,
+    "text": "hello everyone!",
+    "interaction_policy": {
+      "can_favourite": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      },
+      "can_reply": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      },
+      "can_reblog": {
+        "always": [
+          "public",
+          "me"
+        ],
+        "with_approval": []
+      }
+    }
+  }
 }`, string(b))
 }
 

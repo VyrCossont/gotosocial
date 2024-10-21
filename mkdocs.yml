@@ -100,7 +100,7 @@ nav:
       - "configuration/advanced.md"
       - "configuration/observability.md"
   - "Advanced":
-    - "advanced/index.md"
+    - "Overview": "advanced/index.md"
     - "advanced/host-account-domain.md"
     - "advanced/outgoing-proxy.md"
     - "Caching":
@@ -116,6 +116,9 @@ nav:
     - "advanced/tracing.md"
     - "advanced/metrics.md"
     - "advanced/replicating-sqlite.md"
+    - "advanced/sqlite-networked-storage.md"
+    - "Advanced builds":
+      - "advanced/builds/nowasm.md"
 
   - "Admin":
       - "admin/settings.md"

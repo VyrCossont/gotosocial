@@ -78,22 +78,16 @@ func ffmpegGenerateWebpThumb(ctx context.Context, inpath, outpath string, width,
 		// (NOT as libwebp_anim).
 		"-codec:v", "libwebp",
 
-		// Select thumb from first 7 frames.
-		// (in particular <= 7 reduced memory usage, marginally)
-		// (thumb filter: https://ffmpeg.org/ffmpeg-filters.html#thumbnail)
-		"-filter:v", "thumbnail=n=7,"+
+		// Only one frame
+		"-frames:v", "1",
 
-			// Scale to dimensions
-			// (scale filter: https://ffmpeg.org/ffmpeg-filters.html#scale)
-			"scale="+strconv.Itoa(width)+
-			":"+strconv.Itoa(height)+","+
+		// Scale to dimensions
+		// (scale filter: https://ffmpeg.org/ffmpeg-filters.html#scale)
+		"-filter:v", "scale="+strconv.Itoa(width)+":"+strconv.Itoa(height)+","+
 
 			// Attempt to use original pixel format
 			// (format filter: https://ffmpeg.org/ffmpeg-filters.html#format)
 			"format=pix_fmts="+pixfmt,
-
-		// Only one frame
-		"-frames:v", "1",
 
 		// Quality not specified,
 		// i.e. use default which
@@ -224,8 +218,11 @@ func ffprobe(ctx context.Context, filepath string) (*result, error) {
 				// Show specifically stream codec names, types, frame rate, duration, dimens, and pixel format.
 				"stream=codec_name,codec_type,r_frame_rate,duration_ts,width,height,pix_fmt" + ":" +
 
-				// Show orientation.
-				"tags=orientation",
+				// Show orientation tag.
+				"tags=orientation" + ":" +
+
+				// Show rotation data.
+				"side_data=rotation",
 
 			// Limit to reading the first
 			// 1s of data looking for "rotation"
@@ -378,11 +375,19 @@ func (res *result) GetFileType() (gtsmodel.FileType, string) {
 			return gtsmodel.FileTypeAudio, "wma"
 		}
 	case "ogg":
-		switch {
-		case len(res.video) > 0:
-			return gtsmodel.FileTypeVideo, "ogv"
-		case len(res.audio) > 0:
-			return gtsmodel.FileTypeAudio, "ogg"
+		if len(res.video) > 0 {
+			switch res.video[0].codec {
+			case "theora", "dirac": // daala, tarkin
+				return gtsmodel.FileTypeVideo, "ogv"
+			}
+		}
+		if len(res.audio) > 0 {
+			switch res.audio[0].codec {
+			case "opus", "libopus":
+				return gtsmodel.FileTypeAudio, "opus"
+			default:
+				return gtsmodel.FileTypeAudio, "ogg"
+			}
 		}
 	case "matroska,webm":
 		switch {
@@ -490,7 +495,7 @@ func (res *ffprobeResult) Process() (*result, error) {
 	}
 
 	// Check extra packet / frame information
-	// for provided orientation (not always set).
+	// for provided orientation (if provided).
 	for _, pf := range res.PacketsAndFrames {
 
 		// Ensure frame contains tags.
@@ -498,23 +503,24 @@ func (res *ffprobeResult) Process() (*result, error) {
 			continue
 		}
 
-		// Ensure orientation not
-		// already been specified.
-		if r.orientation != 0 {
-			return nil, errors.New("multiple sets of orientation data")
-		}
-
 		// Trim any space from orientation value.
 		str := strings.TrimSpace(pf.Tags.Orientation)
 
 		// Parse as integer value.
-		i, _ := strconv.Atoi(str)
-		if i < 0 || i >= 9 {
+		orient, _ := strconv.Atoi(str)
+		if orient < 0 || orient >= 9 {
 			return nil, errors.New("invalid orientation data")
 		}
 
-		// Set orientation.
-		r.orientation = i
+		// Ensure different value has
+		// not already been specified.
+		if r.orientation != 0 &&
+			orient != r.orientation {
+			return nil, errors.New("multiple sets of orientation / rotation data")
+		}
+
+		// Set new orientation.
+		r.orientation = orient
 	}
 
 	// Preallocate streams to max possible lengths.
@@ -544,14 +550,65 @@ func (res *ffprobeResult) Process() (*result, error) {
 				if p := strings.SplitN(str, "/", 2); len(p) == 2 {
 					n, _ := strconv.ParseUint(p[0], 10, 32)
 					d, _ := strconv.ParseUint(p[1], 10, 32)
-					num, den = uint32(n), uint32(d)
+					num, den = uint32(n), uint32(d) // #nosec G115 -- ParseUint is configured to check
 				} else {
 					n, _ := strconv.ParseUint(p[0], 10, 32)
-					num = uint32(n)
+					num = uint32(n) // #nosec G115 -- ParseUint is configured to check
 				}
 
 				// Set final divised framerate.
 				framerate = float32(num / den)
+			}
+
+			// Check for embedded sidedata
+			// which may contain rotation data.
+			for _, d := range s.SideDataList {
+
+				// Ensure frame side
+				// data IS rotation data.
+				if d.Rotation == 0 {
+					continue
+				}
+
+				// Drop any decimal
+				// rotation value.
+				rot := int(d.Rotation)
+
+				// Round rotation to multiple of 90.
+				// More granularity is not needed.
+				if q := rot % 90; q > 45 {
+					rot += (90 - q)
+				} else {
+					rot -= q
+				}
+
+				// Drop any value above 360
+				// or below -360, these are
+				// just repeat full turns.
+				//
+				// Then convert to
+				// orientation value.
+				var orient int
+				switch rot % 360 {
+				case 0:
+					orient = orientationNormal
+				case 90, -270:
+					orient = orientationRotate90
+				case 180:
+					orient = orientationRotate180
+				case 270, -90:
+					orient = orientationRotate270
+				}
+
+				// Ensure different value has
+				// not already been specified.
+				if r.orientation != 0 &&
+					orient != r.orientation {
+					return nil, errors.New("multiple sets of orientation / rotation data")
+				}
+
+				// Set new orientation.
+				r.orientation = orient
 			}
 
 			// Append video stream data to result.
@@ -580,6 +637,7 @@ type ffprobeResult struct {
 type ffprobePacketOrFrame struct {
 	Type string      `json:"type"`
 	Tags ffprobeTags `json:"tags"`
+	// SideDataList []ffprobeSideData `json:"side_data_list"`
 }
 
 type ffprobeTags struct {
@@ -587,13 +645,18 @@ type ffprobeTags struct {
 }
 
 type ffprobeStream struct {
-	CodecName  string `json:"codec_name"`
-	CodecType  string `json:"codec_type"`
-	PixFmt     string `json:"pix_fmt"`
-	RFrameRate string `json:"r_frame_rate"`
-	DurationTS uint   `json:"duration_ts"`
-	Width      int    `json:"width"`
-	Height     int    `json:"height"`
+	CodecName    string            `json:"codec_name"`
+	CodecType    string            `json:"codec_type"`
+	PixFmt       string            `json:"pix_fmt"`
+	RFrameRate   string            `json:"r_frame_rate"`
+	DurationTS   uint              `json:"duration_ts"`
+	Width        int               `json:"width"`
+	Height       int               `json:"height"`
+	SideDataList []ffprobeSideData `json:"side_data_list"`
+}
+
+type ffprobeSideData struct {
+	Rotation float64 `json:"rotation"`
 }
 
 type ffprobeFormat struct {

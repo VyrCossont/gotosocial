@@ -22,9 +22,9 @@ import (
 	"errors"
 	"net/url"
 
-	"codeberg.org/gruf/go-logger/v2/level"
 	"github.com/superseriousbusiness/activity/streams/vocab"
 	"github.com/superseriousbusiness/gotosocial/internal/ap"
+	"github.com/superseriousbusiness/gotosocial/internal/config"
 	"github.com/superseriousbusiness/gotosocial/internal/db"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
 	"github.com/superseriousbusiness/gotosocial/internal/gtsmodel"
@@ -46,15 +46,7 @@ func (f *federatingDB) GetAccept(
 }
 
 func (f *federatingDB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) error {
-	if log.Level() >= level.DEBUG {
-		i, err := marshalItem(accept)
-		if err != nil {
-			return err
-		}
-		l := log.WithContext(ctx).
-			WithField("accept", i)
-		l.Debug("entering Accept")
-	}
+	log.DebugKV(ctx, "accept", serialize{accept})
 
 	activityContext := getActivityContext(ctx)
 	if activityContext.internal {
@@ -77,14 +69,27 @@ func (f *federatingDB) Accept(ctx context.Context, accept vocab.ActivityStreamsA
 		return gtserror.NewErrorBadRequest(errors.New(text), text)
 	}
 
+	// Ensure requester is the same as the
+	// Actor of the Accept; you can't Accept
+	// something on someone else's behalf.
+	actorURI, err := ap.ExtractActorURI(accept)
+	if err != nil {
+		const text = "Accept had empty or invalid actor property"
+		return gtserror.NewErrorBadRequest(errors.New(text), text)
+	}
+
+	if requestingAcct.URI != actorURI.String() {
+		const text = "Accept actor and requesting account were not the same"
+		return gtserror.NewErrorBadRequest(errors.New(text), text)
+	}
+
 	// Iterate all provided objects in the activity,
 	// handling the ones we know how to handle.
 	for _, object := range ap.ExtractObjects(accept) {
 		if asType := object.GetType(); asType != nil {
-			// Check and handle any
-			// vocab.Type objects.
-			// nolint:gocritic
-			switch asType.GetTypeName() {
+
+			// Check and handle any vocab.Type objects.
+			switch name := asType.GetTypeName(); name {
 
 			// ACCEPT FOLLOW
 			case ap.ActivityFollow:
@@ -96,6 +101,10 @@ func (f *federatingDB) Accept(ctx context.Context, accept vocab.ActivityStreamsA
 				); err != nil {
 					return err
 				}
+
+			// UNHANDLED
+			default:
+				log.Debugf(ctx, "unhandled object type: %s", name)
 			}
 
 		} else if object.IsIRI() {
@@ -114,9 +123,9 @@ func (f *federatingDB) Accept(ctx context.Context, accept vocab.ActivityStreamsA
 					return err
 				}
 
-			// ACCEPT STATUS (reply/boost)
-			case uris.IsStatusesPath(objIRI):
-				if err := f.acceptStatusIRI(
+			// ACCEPT LIKE
+			case uris.IsLikePath(objIRI):
+				if err := f.acceptLikeIRI(
 					ctx,
 					activityID.String(),
 					objIRI.String(),
@@ -126,12 +135,15 @@ func (f *federatingDB) Accept(ctx context.Context, accept vocab.ActivityStreamsA
 					return err
 				}
 
-			// ACCEPT LIKE
-			case uris.IsLikePath(objIRI):
-				if err := f.acceptLikeIRI(
+			// ACCEPT OTHER (reply? boost?)
+			//
+			// Don't check on IsStatusesPath
+			// as this may be a remote status.
+			default:
+				if err := f.acceptOtherIRI(
 					ctx,
-					activityID.String(),
-					objIRI.String(),
+					activityID,
+					objIRI,
 					receivingAcct,
 					requestingAcct,
 				); err != nil {
@@ -278,52 +290,97 @@ func (f *federatingDB) acceptFollowIRI(
 	return nil
 }
 
-func (f *federatingDB) acceptStatusIRI(
+func (f *federatingDB) acceptOtherIRI(
 	ctx context.Context,
-	activityID string,
-	objectIRI string,
+	activityID *url.URL,
+	objectIRI *url.URL,
 	receivingAcct *gtsmodel.Account,
 	requestingAcct *gtsmodel.Account,
 ) error {
-	// Lock on this potential status
-	// URI as we may be updating it.
-	unlock := f.state.FedLocks.Lock(objectIRI)
-	defer unlock()
-
-	// Get the status from the db.
-	status, err := f.state.DB.GetStatusByURI(ctx, objectIRI)
+	// See if we can get a status from the db.
+	status, err := f.state.DB.GetStatusByURI(ctx, objectIRI.String())
 	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		err := gtserror.Newf("db error getting status: %w", err)
 		return gtserror.NewErrorInternalError(err)
 	}
 
-	if status == nil {
-		// We didn't have a status with
-		// this URI, so nothing to do.
-		// Just return.
+	if status != nil {
+		// We had a status stored with this
+		// objectIRI, proceed to accept it.
+		return f.acceptStoredStatus(
+			ctx,
+			activityID,
+			status,
+			receivingAcct,
+			requestingAcct,
+		)
+	}
+
+	if objectIRI.Host == config.GetHost() ||
+		objectIRI.Host == config.GetAccountDomain() {
+		// Claims to be Accepting something of ours,
+		// but we don't have a status stored for this
+		// URI, so most likely it's been deleted in
+		// the meantime, just bail.
 		return nil
 	}
 
-	if !status.IsLocal() {
-		// We don't process Accepts of statuses
-		// that weren't created on our instance.
-		// Just return.
+	// This must be an Accept of a remote Activity
+	// or Object. Ensure relevance of this message
+	// by checking that receiver follows requester.
+	following, err := f.state.DB.IsFollowing(
+		ctx,
+		receivingAcct.ID,
+		requestingAcct.ID,
+	)
+	if err != nil {
+		err := gtserror.Newf("db error checking following: %w", err)
+		return gtserror.NewErrorInternalError(err)
+	}
+
+	if !following {
+		// If we don't follow this person, and
+		// they're not Accepting something we know
+		// about, then we don't give a good goddamn.
 		return nil
 	}
 
-	if util.PtrOrValue(status.PendingApproval, false) {
+	// This may be a reply, or it may be a boost,
+	// we can't know yet without dereferencing it,
+	// but let the processor worry about that.
+	apObjectType := ap.ObjectUnknown
+
+	// Pass to the processor and let them handle side effects.
+	f.state.Workers.Federator.Queue.Push(&messages.FromFediAPI{
+		APObjectType:   apObjectType,
+		APActivityType: ap.ActivityAccept,
+		APIRI:          activityID,
+		APObject:       objectIRI,
+		Receiving:      receivingAcct,
+		Requesting:     requestingAcct,
+	})
+
+	return nil
+}
+
+func (f *federatingDB) acceptStoredStatus(
+	ctx context.Context,
+	activityID *url.URL,
+	status *gtsmodel.Status,
+	receivingAcct *gtsmodel.Account,
+	requestingAcct *gtsmodel.Account,
+) error {
+	// Lock on this status URI
+	// as we may be updating it.
+	unlock := f.state.FedLocks.Lock(status.URI)
+	defer unlock()
+
+	pendingApproval := util.PtrOrValue(status.PendingApproval, false)
+	if !pendingApproval {
 		// Status doesn't need approval or it's
 		// already been approved by an Accept.
 		// Just return.
 		return nil
-	}
-
-	// Make sure the creator of the original status
-	// is the same as the inbox processing the Accept;
-	// this also ensures the status is local.
-	if status.AccountID != receivingAcct.ID {
-		const text = "status author account and inbox account were not the same"
-		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Make sure the target of the interaction (reply/boost)
@@ -336,7 +393,7 @@ func (f *federatingDB) acceptStatusIRI(
 
 	// Mark the status as approved by this Accept URI.
 	status.PendingApproval = util.Ptr(false)
-	status.ApprovedByURI = activityID
+	status.ApprovedByURI = activityID.String()
 	if err := f.state.DB.UpdateStatus(
 		ctx,
 		status,
@@ -402,7 +459,8 @@ func (f *federatingDB) acceptLikeIRI(
 		return nil
 	}
 
-	if !util.PtrOrValue(fave.PendingApproval, false) {
+	pendingApproval := util.PtrOrValue(fave.PendingApproval, false)
+	if !pendingApproval {
 		// Like doesn't need approval or it's
 		// already been approved by an Accept.
 		// Just return.

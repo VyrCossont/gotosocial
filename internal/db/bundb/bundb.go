@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"runtime"
@@ -401,6 +402,18 @@ func maxOpenConns() int {
 	if multiplier < 1 {
 		return 1
 	}
+
+	// Specifically for SQLite databases with
+	// a journal mode of anything EXCEPT "wal",
+	// only 1 concurrent connection is supported.
+	if strings.ToLower(config.GetDbType()) == "sqlite" {
+		journalMode := config.GetDbSqliteJournalMode()
+		journalMode = strings.ToLower(journalMode)
+		if journalMode != "wal" {
+			return 1
+		}
+	}
+
 	return multiplier * runtime.GOMAXPROCS(0)
 }
 
@@ -477,7 +490,10 @@ func deriveBunDBPGOptions() (*pgx.ConnConfig, error) {
 		cfg.Host = address
 	}
 	if port := config.GetDbPort(); port > 0 {
-		cfg.Port = uint16(port)
+		if port > math.MaxUint16 {
+			return nil, errors.New("invalid port, must be in range 1-65535")
+		}
+		cfg.Port = uint16(port) // #nosec G115 -- Just validated above.
 	}
 	if u := config.GetDbUser(); u != "" {
 		cfg.User = u

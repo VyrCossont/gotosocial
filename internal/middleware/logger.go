@@ -26,7 +26,6 @@ import (
 	"codeberg.org/gruf/go-bytesize"
 	"codeberg.org/gruf/go-errors/v2"
 	"codeberg.org/gruf/go-kv"
-	"codeberg.org/gruf/go-logger/v2/level"
 	"github.com/gin-gonic/gin"
 	"github.com/superseriousbusiness/gotosocial/internal/gtscontext"
 	"github.com/superseriousbusiness/gotosocial/internal/gtserror"
@@ -99,11 +98,11 @@ func Logger(logClientIP bool) gin.HandlerFunc {
 			l = l.WithFields(fields...)
 
 			// Default is info
-			lvl := level.INFO
+			lvl := log.INFO
 
 			if code >= 500 {
-				// Actual server error.
-				lvl = level.ERROR
+				// Actual error.
+				lvl = log.ERROR
 			}
 
 			if len(c.Errors) > 0 {
@@ -124,7 +123,7 @@ func Logger(logClientIP bool) gin.HandlerFunc {
 			}
 
 			// Generate a nicer looking bytecount
-			size := bytesize.Size(c.Writer.Size())
+			size := bytesize.Size(c.Writer.Size()) // #nosec G115 -- Just logging
 
 			// Finally, write log entry with status text + body size.
 			l.Logf(lvl, "%s: wrote %s", statusText, size)

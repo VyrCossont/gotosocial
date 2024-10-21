@@ -284,7 +284,10 @@ func walCallback(ctx context.Context, mod api.Module, _, pDB, zSchema uint32, pa
 //
 // https://sqlite.org/c3ref/autovacuum_pages.html
 func (c *Conn) AutoVacuumPages(cb func(schema string, dbPages, freePages, bytesPerPage uint) uint) error {
-	funcPtr := util.AddHandle(c.ctx, cb)
+	var funcPtr uint32
+	if cb != nil {
+		funcPtr = util.AddHandle(c.ctx, cb)
+	}
 	r := c.call("sqlite3_autovacuum_pages_go", uint64(c.handle), uint64(funcPtr))
 	return c.error(r)
 }
@@ -302,7 +305,7 @@ func (c *Conn) SoftHeapLimit(n int64) int64 {
 	return int64(c.call("sqlite3_soft_heap_limit64", uint64(n)))
 }
 
-// SoftHeapLimit imposes a hard limit on heap size.
+// HardHeapLimit imposes a hard limit on heap size.
 //
 // https://sqlite.org/c3ref/hard_heap_limit64.html
 func (c *Conn) HardHeapLimit(n int64) int64 {

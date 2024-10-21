@@ -48,9 +48,6 @@ var (
 
 	// ErrReservedAddr is returned if a dialed address resolves to an IP within a blocked or reserved net.
 	ErrReservedAddr = errors.New("dial within blocked / reserved IP range")
-
-	// ErrBodyTooLarge is returned when a received response body is above predefined limit (default 40MB).
-	ErrBodyTooLarge = errors.New("body size too large")
 )
 
 // Config provides configuration details for setting up a new
@@ -302,7 +299,6 @@ func (c *Client) do(r *Request) (rsp *http.Response, retry bool, err error) {
 		if errorsv2.IsV2(err,
 			context.DeadlineExceeded,
 			context.Canceled,
-			ErrBodyTooLarge,
 			ErrReservedAddr,
 		) {
 			// Non-retryable errors.
@@ -344,14 +340,14 @@ func (c *Client) do(r *Request) (rsp *http.Response, retry bool, err error) {
 
 			if u, _ := strconv.ParseUint(after, 10, 32); u != 0 {
 				// An integer no. of backoff seconds was provided.
-				r.backoff = time.Duration(u) * time.Second
+				r.backoff = time.Duration(u) * time.Second // #nosec G115 -- We clamp backoff below.
 			} else if at, _ := http.ParseTime(after); !at.Before(now) {
 				// An HTTP formatted future date-time was provided.
 				r.backoff = at.Sub(now)
 			}
 
 			// Don't let their provided backoff exceed our max.
-			if max := baseBackoff * time.Duration(c.retries); //
+			if max := baseBackoff * time.Duration(c.retries); // #nosec G115 -- We control c.retries.
 			r.backoff > max {
 				r.backoff = max
 			}

@@ -15,10 +15,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//go:build !nowasm
+
 package ffmpeg
 
 import (
 	"context"
+
+	"codeberg.org/gruf/go-ffmpreg/wasm"
 )
 
 // ffmpegRunner limits the number of
@@ -36,5 +40,7 @@ func InitFfmpeg(ctx context.Context, max int) error {
 
 // Ffmpeg runs the given arguments with an instance of ffmpeg.
 func Ffmpeg(ctx context.Context, args Args) (uint32, error) {
-	return ffmpegRunner.Run(ctx, ffmpeg, args)
+	return ffmpegRunner.Run(ctx, func() (uint32, error) {
+		return wasm.Run(ctx, runtime, ffmpeg, args)
+	})
 }

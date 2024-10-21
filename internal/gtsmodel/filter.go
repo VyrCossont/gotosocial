@@ -20,24 +20,26 @@ package gtsmodel
 import (
 	"regexp"
 	"time"
+
+	"github.com/superseriousbusiness/gotosocial/internal/util"
 )
 
 // Filter stores a filter created by a local account.
 type Filter struct {
-	ID                   string           `bun:"type:CHAR(26),pk,nullzero,notnull,unique"`                    // id of this item in the database
-	CreatedAt            time.Time        `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"` // when was item created
-	UpdatedAt            time.Time        `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"` // when was item last updated
-	ExpiresAt            time.Time        `bun:"type:timestamptz,nullzero"`                                   // Time filter should expire. If null, should not expire.
-	AccountID            string           `bun:"type:CHAR(26),notnull,nullzero"`                              // ID of the local account that created the filter.
-	Title                string           `bun:",nullzero,notnull,unique"`                                    // The name of the filter.
-	Action               FilterAction     `bun:",nullzero,notnull"`                                           // The action to take.
-	Keywords             []*FilterKeyword `bun:"-"`                                                           // Keywords for this filter.
-	Statuses             []*FilterStatus  `bun:"-"`                                                           // Statuses for this filter.
-	ContextHome          *bool            `bun:",nullzero,notnull,default:false"`                             // Apply filter to home timeline and lists.
-	ContextNotifications *bool            `bun:",nullzero,notnull,default:false"`                             // Apply filter to notifications.
-	ContextPublic        *bool            `bun:",nullzero,notnull,default:false"`                             // Apply filter to home timeline and lists.
-	ContextThread        *bool            `bun:",nullzero,notnull,default:false"`                             // Apply filter when viewing a status's associated thread.
-	ContextAccount       *bool            `bun:",nullzero,notnull,default:false"`                             // Apply filter when viewing an account profile.
+	ID                   string           `bun:"type:CHAR(26),pk,nullzero,notnull,unique"`                            // id of this item in the database
+	CreatedAt            time.Time        `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"`         // when was item created
+	UpdatedAt            time.Time        `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"`         // when was item last updated
+	ExpiresAt            time.Time        `bun:"type:timestamptz,nullzero"`                                           // Time filter should expire. If null, should not expire.
+	AccountID            string           `bun:"type:CHAR(26),notnull,nullzero,unique:filters_account_id_title_uniq"` // ID of the local account that created the filter.
+	Title                string           `bun:",nullzero,notnull,unique:filters_account_id_title_uniq"`              // The name of the filter.
+	Action               FilterAction     `bun:",nullzero,notnull"`                                                   // The action to take.
+	Keywords             []*FilterKeyword `bun:"-"`                                                                   // Keywords for this filter.
+	Statuses             []*FilterStatus  `bun:"-"`                                                                   // Statuses for this filter.
+	ContextHome          *bool            `bun:",nullzero,notnull,default:false"`                                     // Apply filter to home timeline and lists.
+	ContextNotifications *bool            `bun:",nullzero,notnull,default:false"`                                     // Apply filter to notifications.
+	ContextPublic        *bool            `bun:",nullzero,notnull,default:false"`                                     // Apply filter to home timeline and lists.
+	ContextThread        *bool            `bun:",nullzero,notnull,default:false"`                                     // Apply filter when viewing a status's associated thread.
+	ContextAccount       *bool            `bun:",nullzero,notnull,default:false"`                                     // Apply filter when viewing an account profile.
 }
 
 // Expired returns whether the filter has expired at a given time.
@@ -61,14 +63,23 @@ type FilterKeyword struct {
 
 // Compile will compile this FilterKeyword as a prepared regular expression.
 func (k *FilterKeyword) Compile() (err error) {
-	var wordBreak string
-	if k.WholeWord != nil && *k.WholeWord {
-		wordBreak = `\b`
+	var (
+		wordBreakStart string
+		wordBreakEnd   string
+	)
+
+	if util.PtrOrZero(k.WholeWord) {
+		// Either word boundary or
+		// whitespace or start of line.
+		wordBreakStart = `(?:\b|\s|^)`
+		// Either word boundary or
+		// whitespace or end of line.
+		wordBreakEnd = `(?:\b|\s|$)`
 	}
 
 	// Compile keyword filter regexp.
 	quoted := regexp.QuoteMeta(k.Keyword)
-	k.Regexp, err = regexp.Compile(`(?i)` + wordBreak + quoted + wordBreak)
+	k.Regexp, err = regexp.Compile(`(?i)` + wordBreakStart + quoted + wordBreakEnd)
 	return // caller is expected to wrap this error
 }
 
