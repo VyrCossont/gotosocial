@@ -50,6 +50,7 @@ import (
 	"github.com/superseriousbusiness/gotosocial/internal/state"
 	"github.com/superseriousbusiness/gotosocial/internal/text"
 	"github.com/superseriousbusiness/gotosocial/internal/typeutils"
+	"github.com/superseriousbusiness/gotosocial/internal/webpush"
 )
 
 // Processor groups together processing functions and
@@ -186,6 +187,7 @@ func NewProcessor(
 	mediaManager *mm.Manager,
 	state *state.State,
 	emailSender email.Sender,
+	webPushSender webpush.Sender,
 	visFilter *visibility.Filter,
 	intFilter *interaction.Filter,
 ) *Processor {
@@ -239,6 +241,7 @@ func NewProcessor(
 		converter,
 		visFilter,
 		emailSender,
+		webPushSender,
 		&processor.account,
 		&processor.media,
 		&processor.stream,

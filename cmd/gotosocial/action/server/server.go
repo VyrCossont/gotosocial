@@ -48,6 +48,7 @@ import (
 	tlprocessor "github.com/superseriousbusiness/gotosocial/internal/processing/timeline"
 	"github.com/superseriousbusiness/gotosocial/internal/timeline"
 	"github.com/superseriousbusiness/gotosocial/internal/tracing"
+	"github.com/superseriousbusiness/gotosocial/internal/webpush"
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"github.com/superseriousbusiness/gotosocial/internal/config"
@@ -260,6 +261,9 @@ var Start action.GTSAction = func(ctx context.Context) error {
 		}
 	}
 
+	// Create a Web Push notification sender.
+	webPushSender := webpush.NewSender(client, state)
+
 	// Initialize both home / list timelines.
 	state.Timelines.Home = timeline.NewManager(
 		tlprocessor.HomeTimelineGrab(state),
@@ -316,6 +320,7 @@ var Start action.GTSAction = func(ctx context.Context) error {
 		mediaManager,
 		state,
 		emailSender,
+		webPushSender,
 		visFilter,
 		intFilter,
 	)
