@@ -57,5 +57,6 @@ type DB interface {
 	Timeline
 	User
 	Tombstone
+	WebPush
 	WorkerTask
 }
