@@ -283,9 +283,7 @@ func (s *searchDB) accountText(following bool) *bun.SelectQuery {
 func (s *searchDB) SearchForStatuses(
 	ctx context.Context,
 	requestingAccountID string,
-	query string,
-	fromAccountID string,
-	classicScope bool,
+	parsed *gtsmodel.ParsedQuery,
 	maxID string,
 	minID string,
 	limit int,
@@ -312,7 +310,11 @@ func (s *searchDB) SearchForStatuses(
 		Column("status.id").
 		// Ignore boosts.
 		Where("? IS NULL", bun.Ident("status.boost_of_id"))
-	if classicScope {
+
+	// TODO: (Vyr) break up operator application into functions
+	//	type SearchOperator interface { Modify(q *bun.SelectQuery) }
+
+	if parsed.ClassicScope {
 		// Select only statuses created by
 		// accountID or replying to accountID.
 		q = q.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
@@ -321,9 +323,42 @@ func (s *searchDB) SearchForStatuses(
 				WhereOr("? = ?", bun.Ident("status.in_reply_to_account_id"), requestingAccountID)
 		})
 	}
-	if fromAccountID != "" {
-		q = q.Where("? = ?", bun.Ident("status.account_id"), fromAccountID)
+
+	// TODO: (Vyr) it makes sense to have only one from: account,
+	//	but a user might want multiple -from: operators.
+	//	Implement from: operator negation.
+	if parsed.FromAccountID != "" {
+		q = q.Where("? = ?", bun.Ident("status.account_id"), parsed.FromAccountID)
 	}
+
+	// TODO: (Vyr) handle mentions as well, either by including them in to:
+	//	or introducing a mentions: account operator.
+	// TODO: (Vyr) implement to: operator negation (like -from:, a user may want multiple -to:).
+	if parsed.ToAccountID != "" {
+		q = q.Where("? = ?", bun.Ident("status.in_reply_to_account_id"), parsed.ToAccountID)
+	}
+
+	switch parsed.IsReply {
+	case gtsmodel.ParsedQueryTernaryIgnore:
+		break
+	case gtsmodel.ParsedQueryTernaryInclude:
+		q = q.Where("? IS NULL", bun.Ident("status.in_reply_to_account_id"))
+	case gtsmodel.ParsedQueryTernaryExclude:
+		q = q.Where("? IS NOT NULL", bun.Ident("status.in_reply_to_account_id"))
+	}
+
+	// TODO: (Vyr) rest of is: operators
+
+	switch parsed.HasCW {
+	case gtsmodel.ParsedQueryTernaryIgnore:
+		break
+	case gtsmodel.ParsedQueryTernaryInclude:
+		q = q.Where("? IS NULL", bun.Ident("status.content_warning"))
+	case gtsmodel.ParsedQueryTernaryExclude:
+		q = q.Where("? IS NOT NULL", bun.Ident("status.content_warning"))
+	}
+
+	// TODO: (Vyr) rest of has: operators
 
 	// Return only items with a LOWER id than maxID.
 	if maxID == "" {
@@ -344,7 +379,7 @@ func (s *searchDB) SearchForStatuses(
 
 	// Search using LIKE for matches of query
 	// string within statusText subquery.
-	q = whereLike(q, statusTextSubq, query)
+	q = whereLike(q, statusTextSubq, parsed.Query)
 
 	if limit > 0 {
 		// Limit amount of statuses returned.

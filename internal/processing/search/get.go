@@ -830,19 +830,16 @@ func (p *Processor) statusesByText(
 	if err != nil {
 		return err
 	}
-	query = parsed.query
-	// If the owning account for statuses was not provided as the account_id query parameter,
-	// it may still have been provided as a search operator in the query string.
-	if fromAccountID == "" {
-		fromAccountID = parsed.fromAccountID
+	// If the owning account for statuses was not provided as a search operator in the query string,
+	// it may still have been provided as the account_id query parameter.
+	if fromAccountID != "" {
+		parsed.FromAccountID = fromAccountID
 	}
 
 	statuses, err := p.state.DB.SearchForStatuses(
 		ctx,
 		requestingAccountID,
-		query,
-		fromAccountID,
-		parsed.classicScope,
+		parsed,
 		maxID,
 		minID,
 		limit,
@@ -859,43 +856,67 @@ func (p *Processor) statusesByText(
 	return nil
 }
 
-// parsedQuery represents the results of parsing the search operator terms within a query.
-type parsedQuery struct {
-	// query is the original search query text with operator terms removed.
-	query string
-	// fromAccountID is the account from a successfully resolved `from:` operator, if present.
-	fromAccountID string
-	// classicScope enables vanilla GtS search scope restrictions.
-	classicScope bool
-}
-
 // parseQuery parses query text and handles any search operator terms present.
-func (p *Processor) parseQuery(ctx context.Context, query string) (parsed parsedQuery, err error) {
+func (p *Processor) parseQuery(ctx context.Context, query string) (parsed *gtsmodel.ParsedQuery, err error) {
+	parsed = &gtsmodel.ParsedQuery{}
+
 	queryPartSeparator := " "
 	queryParts := strings.Split(query, queryPartSeparator)
 	nonOperatorQueryParts := make([]string, 0, len(queryParts))
 	for _, queryPart := range queryParts {
-		if arg, hasPrefix := strings.CutPrefix(queryPart, "from:"); hasPrefix {
-			parsed.fromAccountID, err = p.parseFromOperatorArg(ctx, arg)
-			if err != nil {
-				return
-			}
-		} else if queryPart == "scope:classic" || queryPart == "in:library" {
-			parsed.classicScope = true
-		} else {
-			nonOperatorQueryParts = append(nonOperatorQueryParts, queryPart)
+		var match bool
+
+		match, err = p.tryParseAccountOperator(ctx, "from:", queryPart, &parsed.FromAccountID)
+		if match {
+			continue
 		}
+		if err != nil {
+			return
+		}
+
+		match, err = p.tryParseAccountOperator(ctx, "to:", queryPart, &parsed.ToAccountID)
+		if match {
+			continue
+		}
+		if err != nil {
+			return
+		}
+
+		if queryPart == "scope:classic" || queryPart == "in:library" {
+			parsed.ClassicScope = true
+			continue
+		}
+
+		// TODO: (Vyr) add in:bookmarks
+		// TODO: (Vyr) add lang: and domain: ternary operators
+		// TODO: (Vyr) add sort: operator
+		// TODO: (Vyr) add -from: and -to:
+		// TODO: (Vyr) warn on use of multiple from: or to: operators and similar
+
+		nonOperatorQueryParts = append(nonOperatorQueryParts, queryPart)
 	}
-	parsed.query = strings.Join(nonOperatorQueryParts, queryPartSeparator)
+	parsed.Query = strings.Join(nonOperatorQueryParts, queryPartSeparator)
 	return
 }
 
-// parseFromOperatorArg attempts to parse the from: operator's argument as an account name,
-// and returns the account ID if possible. Allows specifying an account name with or without a leading @.
-func (p *Processor) parseFromOperatorArg(ctx context.Context, namestring string) (string, error) {
+// tryParseAccountOperator attempts to parse the from: or to: operator's argument as an account name,
+// and stores the account ID in the output if possible. Allows specifying an account name with or without a leading @.
+// Returns true if the operator was parsed successfully.
+func (p *Processor) tryParseAccountOperator(
+	ctx context.Context,
+	operatorPrefix string,
+	queryPart string,
+	output *string,
+) (bool, error) {
+	namestring, hasPrefix := strings.CutPrefix(queryPart, operatorPrefix)
+	if !hasPrefix {
+		return false, nil
+	}
+
 	if namestring == "" {
-		return "", gtserror.New(
-			"the 'from:' search operator requires an account name, but it wasn't provided",
+		return false, gtserror.Newf(
+			"the %#v search operator requires an account name, but it wasn't provided",
+			operatorPrefix,
 		)
 	}
 	if namestring[0] != '@' {
@@ -904,18 +925,108 @@ func (p *Processor) parseFromOperatorArg(ctx context.Context, namestring string)
 
 	username, domain, err := util.ExtractNamestringParts(namestring)
 	if err != nil {
-		return "", gtserror.Newf(
-			"the 'from:' search operator couldn't parse its argument as an account name: %w",
+		return false, gtserror.Newf(
+			"the %#v search operator couldn't parse its argument as an account name: %w",
+			operatorPrefix,
 			err,
 		)
 	}
 	account, err := p.state.DB.GetAccountByUsernameDomain(gtscontext.SetBarebones(ctx), username, domain)
 	if err != nil {
-		return "", gtserror.Newf(
-			"the 'from:' search operator couldn't find the requested account name: %w",
+		return false, gtserror.Newf(
+			"the %#v search operator couldn't find the requested account name: %w",
+			operatorPrefix,
 			err,
 		)
 	}
 
-	return account.ID, nil
+	*output = account.ID
+	return true, nil
+}
+
+func (p *Processor) tryParseTernaryFilterOperators(
+	queryPart string,
+	output *gtsmodel.ParsedQuery,
+) (bool, error) {
+	value := gtsmodel.ParsedQueryTernaryInclude
+	opAndArg, negated := strings.CutPrefix(queryPart, "-")
+	if negated {
+		value = gtsmodel.ParsedQueryTernaryExclude
+	}
+
+	parts := strings.SplitAfterN(opAndArg, ":", 2)
+	if len(parts) < 2 {
+		return false, nil
+	}
+	operator := parts[0]
+	arg := parts[1]
+	invalidArg := false
+
+	switch operator {
+	case "is:":
+		switch arg {
+		case "reply":
+			output.IsReply = value
+		case "sensitive":
+			output.IsSensitive = value
+		case "public":
+			output.IsPublic = value
+		case "unlisted":
+			output.IsUnlisted = value
+		case "private":
+			output.IsPrivate = value
+		case "direct", "dm":
+			output.IsDirect = value
+		case "local":
+			output.IsLocal = value
+		case "local_only":
+			output.IsLocalOnly = value
+		case "note":
+			output.IsNote = value
+		case "article":
+			output.IsArticle = value
+		case "bot":
+			output.IsBot = value
+
+		default:
+			invalidArg = true
+		}
+
+	case "has:":
+		switch arg {
+		case "cw", "content_warning":
+			output.HasCW = value
+		case "media":
+			output.HasMedia = value
+		case "audio":
+			output.HasAudio = value
+		case "image":
+			output.HasImage = value
+		case "video":
+			output.HasVideo = value
+		case "poll":
+			output.HasPoll = value
+		case "link":
+			output.HasLink = value
+		case "tag":
+			output.HasTag = value
+
+		default:
+			invalidArg = true
+		}
+
+	default:
+		// May be a different operator. Let something else try to match it.
+		return false, nil
+	}
+
+	if invalidArg {
+		return false, gtserror.Newf(
+			"%#v is not a valid argument to the %#v search operator",
+			arg,
+			operator,
+		)
+	}
+
+	return false, nil
 }
