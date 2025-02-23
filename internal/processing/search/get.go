@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"codeberg.org/gruf/go-kv"
+	"github.com/superseriousbusiness/gotosocial/internal/ap"
 	apimodel "github.com/superseriousbusiness/gotosocial/internal/api/model"
 	"github.com/superseriousbusiness/gotosocial/internal/config"
 	"github.com/superseriousbusiness/gotosocial/internal/db"
@@ -826,23 +827,15 @@ func (p *Processor) statusesByText(
 	fromAccountID string,
 	appendStatus func(*gtsmodel.Status),
 ) error {
-	parsed, err := p.parseQuery(ctx, query)
+	parsed, err := p.parseQuery(ctx, query, requestingAccountID, fromAccountID)
 	if err != nil {
 		return err
-	}
-	query = parsed.query
-	// If the owning account for statuses was not provided as the account_id query parameter,
-	// it may still have been provided as a search operator in the query string.
-	if fromAccountID == "" {
-		fromAccountID = parsed.fromAccountID
 	}
 
 	statuses, err := p.state.DB.SearchForStatuses(
 		ctx,
 		requestingAccountID,
-		query,
-		fromAccountID,
-		parsed.classicScope,
+		parsed,
 		maxID,
 		minID,
 		limit,
@@ -859,63 +852,211 @@ func (p *Processor) statusesByText(
 	return nil
 }
 
-// parsedQuery represents the results of parsing the search operator terms within a query.
-type parsedQuery struct {
-	// query is the original search query text with operator terms removed.
-	query string
-	// fromAccountID is the account from a successfully resolved `from:` operator, if present.
-	fromAccountID string
-	// classicScope enables vanilla GtS search scope restrictions.
-	classicScope bool
-}
-
 // parseQuery parses query text and handles any search operator terms present.
-func (p *Processor) parseQuery(ctx context.Context, query string) (parsed parsedQuery, err error) {
+func (p *Processor) parseQuery(
+	ctx context.Context,
+	query string,
+	requestingAccountID string,
+	fromAccountID string,
+) (parsed *gtsmodel.ParsedQuery, err error) {
+	parsed = &gtsmodel.ParsedQuery{}
+
+	// The search API parameter `account_id` is equivalent to the `from:` operator.
+	if fromAccountID != "" {
+		parsed.Operators = append(parsed.Operators, gtsmodel.NewFromAccountOperator(false, fromAccountID))
+	}
+
+	classicScopeOperatorParser := p.MakeParseClassicScopeOperator(requestingAccountID)
+	operatorParsers := map[string][]QueryOperatorParser{
+		"in:":    {classicScopeOperatorParser},
+		"scope:": {classicScopeOperatorParser},
+		"from:":  {p.ParseAccountOperator},
+		"to:":    {p.ParseAccountOperator},
+		"is:":    {p.ParseFilterOperator},
+		"has:":   {p.ParseFilterOperator},
+	}
+
 	queryPartSeparator := " "
 	queryParts := strings.Split(query, queryPartSeparator)
 	nonOperatorQueryParts := make([]string, 0, len(queryParts))
+QueryPartLoop:
 	for _, queryPart := range queryParts {
-		if arg, hasPrefix := strings.CutPrefix(queryPart, "from:"); hasPrefix {
-			parsed.fromAccountID, err = p.parseFromOperatorArg(ctx, arg)
-			if err != nil {
-				return
+		opAndArg, negated := strings.CutPrefix(queryPart, "-")
+		parts := strings.SplitAfterN(opAndArg, ":", 2)
+
+		// Might be an operator.
+		if len(parts) == 2 {
+			op := parts[0]
+			arg := parts[1]
+			for _, parser := range operatorParsers[op] {
+				var queryOperator gtsmodel.QueryOperator
+				queryOperator, err = parser(ctx, negated, op, arg)
+				if err != nil {
+					return
+				}
+				if queryOperator == nil {
+					continue
+				}
+				// Found an operator.
+				parsed.Operators = append(parsed.Operators, queryOperator)
+				continue QueryPartLoop
 			}
-		} else if queryPart == "scope:classic" || queryPart == "in:library" {
-			parsed.classicScope = true
-		} else {
-			nonOperatorQueryParts = append(nonOperatorQueryParts, queryPart)
 		}
+
+		// Not an operator.
+		nonOperatorQueryParts = append(nonOperatorQueryParts, queryPart)
 	}
-	parsed.query = strings.Join(nonOperatorQueryParts, queryPartSeparator)
+
+	// Glue everything that wasn't an operator back together.
+	parsed.Query = strings.Join(nonOperatorQueryParts, queryPartSeparator)
 	return
 }
 
-// parseFromOperatorArg attempts to parse the from: operator's argument as an account name,
-// and returns the account ID if possible. Allows specifying an account name with or without a leading @.
-func (p *Processor) parseFromOperatorArg(ctx context.Context, namestring string) (string, error) {
-	if namestring == "" {
-		return "", gtserror.New(
-			"the 'from:' search operator requires an account name, but it wasn't provided",
+type QueryOperatorParser func(
+	ctx context.Context,
+	negated bool,
+	op string,
+	arg string,
+) (gtsmodel.QueryOperator, error)
+
+// MakeParseClassicScopeOperator takes the requestingAccountID from the query parameters
+// and returns an operator parser that uses it.
+func (p *Processor) MakeParseClassicScopeOperator(requestingAccountID string) QueryOperatorParser {
+	return func(ctx context.Context, negated bool, op string, arg string) (gtsmodel.QueryOperator, error) {
+		if negated {
+			return nil, gtserror.Newf("the %#v search operator can't be negated", op)
+		}
+		if (op == "scope:" && arg == "classic") || (op == "in:" && arg == "library") {
+			return gtsmodel.NewClassicScopeOperator(requestingAccountID), nil
+		}
+		return nil, nil
+	}
+}
+
+func (p *Processor) ParseAccountOperator(
+	ctx context.Context,
+	negated bool,
+	op string,
+	arg string,
+) (gtsmodel.QueryOperator, error) {
+	if arg == "" {
+		return nil, gtserror.Newf(
+			"the %#v search operator requires an account name, but it wasn't provided",
+			op,
 		)
 	}
-	if namestring[0] != '@' {
-		namestring = "@" + namestring
+	if arg[0] != '@' {
+		arg = "@" + arg
 	}
 
-	username, domain, err := util.ExtractNamestringParts(namestring)
+	username, domain, err := util.ExtractNamestringParts(arg)
 	if err != nil {
-		return "", gtserror.Newf(
-			"the 'from:' search operator couldn't parse its argument as an account name: %w",
+		return nil, gtserror.Newf(
+			"the %#v search operator couldn't parse its argument as an account name: %w",
+			op,
 			err,
 		)
 	}
 	account, err := p.state.DB.GetAccountByUsernameDomain(gtscontext.SetBarebones(ctx), username, domain)
 	if err != nil {
-		return "", gtserror.Newf(
-			"the 'from:' search operator couldn't find the requested account name: %w",
+		return nil, gtserror.Newf(
+			"the %#v search operator couldn't find the requested account name: %w",
+			op,
 			err,
 		)
 	}
 
-	return account.ID, nil
+	switch op {
+	case "from:":
+		return gtsmodel.NewFromAccountOperator(negated, account.ID), nil
+	case "to:":
+		return gtsmodel.NewToAccountOperator(negated, account.ID), nil
+	default:
+		return nil, gtserror.Newf("unknown search account operator: %#v", op)
+	}
+}
+
+func (p *Processor) ParseFilterOperator(
+	ctx context.Context,
+	negated bool,
+	op string,
+	arg string,
+) (gtsmodel.QueryOperator, error) {
+	switch op {
+	case "is:":
+		switch arg {
+		case "reply":
+			return gtsmodel.NewIsReplyOperator(negated), nil
+		case "public":
+			return gtsmodel.NewIsVisibilityOperator(negated, gtsmodel.VisibilityPublic), nil
+		case "unlisted", "unlocked":
+			return gtsmodel.NewIsVisibilityOperator(negated, gtsmodel.VisibilityUnlocked), nil
+		case "private", "followers_only":
+			return gtsmodel.NewIsVisibilityOperator(negated, gtsmodel.VisibilityFollowersOnly), nil
+		case "mutuals_only":
+			return gtsmodel.NewIsVisibilityOperator(negated, gtsmodel.VisibilityMutualsOnly), nil
+		case "direct", "dm":
+			return gtsmodel.NewIsVisibilityOperator(negated, gtsmodel.VisibilityDirect), nil
+		case "local":
+			return gtsmodel.NewIsLocalOperator(negated), nil
+		case "federated":
+			return gtsmodel.NewIsFederatedOperator(negated), nil
+		case "local_only":
+			// This operator is the reverse sense of `federated:`.
+			return gtsmodel.NewIsFederatedOperator(!negated), nil
+		case "sensitive":
+			return gtsmodel.NewIsSensitiveOperator(negated), nil
+		case "note":
+			return gtsmodel.NewIsActivityTypeOperator(negated, ap.ObjectNote), nil
+		case "article":
+			return gtsmodel.NewIsActivityTypeOperator(negated, ap.ObjectArticle), nil
+		case "page":
+			return gtsmodel.NewIsActivityTypeOperator(negated, ap.ObjectPage), nil
+		case "event":
+			return gtsmodel.NewIsActivityTypeOperator(negated, ap.ObjectEvent), nil
+		case "place":
+			return gtsmodel.NewIsActivityTypeOperator(negated, ap.ObjectPlace), nil
+
+		default:
+			return nil, gtserror.Newf(
+				"%#v is not a valid argument to the %#v search operator",
+				arg,
+				op,
+			)
+		}
+
+	case "has:":
+		switch arg {
+		case "content":
+			return gtsmodel.NewHasContentOperator(negated), nil
+		case "cw", "content_warning":
+			return gtsmodel.NewHasContentWarningOperator(negated), nil
+		case "media":
+			return gtsmodel.NewHasAttachmentOperator(negated), nil
+		case "poll":
+			return gtsmodel.NewHasPollOperator(negated), nil
+		case "tag":
+			return gtsmodel.NewHasTagOperator(negated), nil
+		case "mention":
+			return gtsmodel.NewHasMentionOperator(negated), nil
+		case "emoji":
+			return gtsmodel.NewHasEmojiOperator(negated), nil
+		case "edit":
+			return gtsmodel.NewHasEditOperator(negated), nil
+
+		default:
+			return nil, gtserror.Newf(
+				"%#v is not a valid argument to the %#v search operator",
+				arg,
+				op,
+			)
+		}
+
+	default:
+		return nil, gtserror.Newf(
+			"%#v is not a valid argument to the %#v search operator",
+			arg,
+			op,
+		)
+	}
 }
