@@ -283,9 +283,7 @@ func (s *searchDB) accountText(following bool) *bun.SelectQuery {
 func (s *searchDB) SearchForStatuses(
 	ctx context.Context,
 	requestingAccountID string,
-	query string,
-	fromAccountID string,
-	classicScope bool,
+	parsed *gtsmodel.ParsedQuery,
 	maxID string,
 	minID string,
 	limit int,
@@ -312,17 +310,9 @@ func (s *searchDB) SearchForStatuses(
 		Column("status.id").
 		// Ignore boosts.
 		Where("? IS NULL", bun.Ident("status.boost_of_id"))
-	if classicScope {
-		// Select only statuses created by
-		// accountID or replying to accountID.
-		q = q.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.
-				Where("? = ?", bun.Ident("status.account_id"), requestingAccountID).
-				WhereOr("? = ?", bun.Ident("status.in_reply_to_account_id"), requestingAccountID)
-		})
-	}
-	if fromAccountID != "" {
-		q = q.Where("? = ?", bun.Ident("status.account_id"), fromAccountID)
+
+	for _, operator := range parsed.Operators {
+		q = operator.Modify(s.db.Dialect(), q)
 	}
 
 	// Return only items with a LOWER id than maxID.
@@ -344,7 +334,7 @@ func (s *searchDB) SearchForStatuses(
 
 	// Search using LIKE for matches of query
 	// string within statusText subquery.
-	q = whereLike(q, statusTextSubq, query)
+	q = whereLike(q, statusTextSubq, parsed.Query)
 
 	if limit > 0 {
 		// Limit amount of statuses returned.

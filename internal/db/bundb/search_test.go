@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"code.superseriousbusiness.org/gotosocial/internal/db"
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -105,17 +106,45 @@ func (suite *SearchTestSuite) TestSearchAccountsFossAny() {
 
 func (suite *SearchTestSuite) TestSearchStatuses() {
 	testAccount := suite.testAccounts["local_account_1"]
+	parsed := &gtsmodel.ParsedQuery{
+		Query: "hello",
+		Operators: []gtsmodel.QueryOperator{
+			gtsmodel.NewClassicScopeOperator(testAccount.ID),
+		},
+	}
 
-	statuses, err := suite.db.SearchForStatuses(suite.T().Context(), testAccount.ID, "hello", "", true, "", "", 10, 0)
+	statuses, err := suite.db.SearchForStatuses(suite.T().Context(), testAccount.ID, parsed, "", "", 10, 0)
 	suite.NoError(err)
 	suite.Len(statuses, 1)
+}
+
+func (suite *SearchTestSuite) TestSearchStatusesWithMedia() {
+	testAccount := suite.testAccounts["local_account_1"]
+	parsed := &gtsmodel.ParsedQuery{
+		Query: "welcome",
+		Operators: []gtsmodel.QueryOperator{
+			gtsmodel.NewHasAttachmentOperator(false),
+		},
+	}
+
+	statuses, err := suite.db.SearchForStatuses(suite.T().Context(), testAccount.ID, parsed, "", "", 10, 0)
+	suite.NoError(err)
+	suite.Len(statuses, 1)
+	suite.NotEmpty(statuses[0].AttachmentIDs)
 }
 
 func (suite *SearchTestSuite) TestSearchStatusesFromAccount() {
 	testAccount := suite.testAccounts["local_account_1"]
 	fromAccount := suite.testAccounts["local_account_2"]
+	parsed := &gtsmodel.ParsedQuery{
+		Query: "hi",
+		Operators: []gtsmodel.QueryOperator{
+			gtsmodel.NewClassicScopeOperator(testAccount.ID),
+			gtsmodel.NewFromAccountOperator(false, fromAccount.ID),
+		},
+	}
 
-	statuses, err := suite.db.SearchForStatuses(suite.T().Context(), testAccount.ID, "hi", fromAccount.ID, true, "", "", 10, 0)
+	statuses, err := suite.db.SearchForStatuses(suite.T().Context(), testAccount.ID, parsed, "", "", 10, 0)
 	suite.NoError(err)
 	if suite.Len(statuses, 1) {
 		suite.Equal(fromAccount.ID, statuses[0].AccountID)
