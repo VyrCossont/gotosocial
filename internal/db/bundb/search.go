@@ -329,12 +329,23 @@ func (s *searchDB) SearchForStatuses(
 		frontToBack = false
 	}
 
-	// Select status text as subquery.
-	statusTextSubq := s.statusText()
+	switch s.db.Dialect().Name() {
+	case dialect.SQLite:
+		// Select status text as subquery.
+		statusTextSubq := s.statusText()
 
-	// Search using LIKE for matches of query
-	// string within statusText subquery.
-	q = whereLike(q, statusTextSubq, parsed.Query)
+		// Search using LIKE for matches of query
+		// string within statusText subquery.
+		q = whereLike(q, statusTextSubq, parsed.Query)
+
+	case dialect.PG:
+		q = q.Where("websearch_to_tsquery('english', ?) @@ (to_tsvector('english', coalesce(content_warning, '')) || to_tsvector('english', content))",
+			parsed.Query,
+		)
+
+	default:
+		panic("unsupported db type")
+	}
 
 	if limit > 0 {
 		// Limit amount of statuses returned.
