@@ -3117,6 +3117,24 @@ func NewTestFediServices() map[string]vocab.ActivityStreamsService {
 	}
 }
 
+func NewTestFediOutboxes() map[string]vocab.ActivityStreamsOrderedCollection {
+	noteURL := "https://turnip.farm/users/turniplover6969/statuses/70c53e54-3146-42d5-a630-83c8b6c7c042"
+	note := NewTestFediStatuses()[noteURL]
+	return map[string]vocab.ActivityStreamsOrderedCollection{
+		"https://turnip.farm/users/turniplover6969/outbox": newAPOutbox(
+			URLMustParse("https://turnip.farm/users/turniplover6969/outbox"),
+			[]vocab.ActivityStreamsCreate{
+				WrapAPNoteInCreate(
+					URLMustParse(noteURL+"/activity"),
+					URLMustParse("https://turnip.farm/users/turniplover6969"),
+					TimeMustParse("2022-07-13T12:13:12+02:00"),
+					note,
+				),
+			},
+		),
+	}
+}
+
 func NewTestFediEmojis() map[string]vocab.TootEmoji {
 	return map[string]vocab.TootEmoji{
 		"http://fossbros-anonymous.io/emoji/01GD5HCC2YECT012TK8PAGX4D1": newAPEmoji(
@@ -4365,6 +4383,30 @@ func newAPService(
 	service.SetActivityStreamsImage(headerProperty)
 
 	return service
+}
+
+// newAPOutbox returns a non-paged outbox collection of statuses only.
+func newAPOutbox(
+	idURI *url.URL,
+	creates []vocab.ActivityStreamsCreate,
+) vocab.ActivityStreamsOrderedCollection {
+	outbox := streams.NewActivityStreamsOrderedCollection()
+
+	idProp := streams.NewJSONLDIdProperty()
+	idProp.SetIRI(idURI)
+	outbox.SetJSONLDId(idProp)
+
+	totalItemsProp := streams.NewActivityStreamsTotalItemsProperty()
+	totalItemsProp.Set(len(creates))
+	outbox.SetActivityStreamsTotalItems(totalItemsProp)
+
+	orderedItemsProp := streams.NewActivityStreamsOrderedItemsProperty()
+	for _, create := range creates {
+		orderedItemsProp.AppendActivityStreamsCreate(create)
+	}
+	outbox.SetActivityStreamsOrderedItems(orderedItemsProp)
+
+	return outbox
 }
 
 func newAPMention(uri *url.URL, namestring string) vocab.ActivityStreamsMention {

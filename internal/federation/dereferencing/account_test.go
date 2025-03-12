@@ -462,6 +462,39 @@ func (suite *AccountTestSuite) TestRefreshFederatedRemoteAccountWithKeyChange() 
 	suite.True(updatedAcc.PublicKey.Equal(fetchingAcc.PublicKey))
 }
 
+// Test deferencing a remote account and then actually running the queued deref worker task.
+func (suite *AccountTestSuite) TestDerefenceRemoteAccountQueuedTask() {
+	ctx, cncl := context.WithCancel(context.Background())
+	defer cncl()
+
+	fetchingAcc := suite.testAccounts["local_account_1"]
+	remoteURI := "https://turnip.farm/users/turniplover6969"
+
+	// This status is in the turnip farmer's outbox and shouldn't exist locally yet.
+	expectedStatusURI := "https://turnip.farm/users/turniplover6969/statuses/70c53e54-3146-42d5-a630-83c8b6c7c042"
+	expectedStatus, err := suite.state.DB.GetStatusByURI(ctx, expectedStatusURI)
+	suite.ErrorIs(err, db.ErrNoEntries)
+	suite.Nil(expectedStatus)
+
+	// Fetch the remote account to load into the database.
+	remoteAcc, _, err := suite.dereferencer.GetAccountByURI(ctx,
+		fetchingAcc.Username,
+		testrig.URLMustParse(remoteURI),
+	)
+	suite.NoError(err)
+	suite.NotNil(remoteAcc)
+
+	task, ok := suite.state.Workers.Dereference.Queue.Pop()
+	if suite.True(ok) {
+		task(ctx)
+	}
+
+	// The expected status should have been fetched.
+	expectedStatus, err = suite.state.DB.GetStatusByURI(ctx, expectedStatusURI)
+	suite.NoError(err)
+	suite.NotNil(expectedStatus)
+}
+
 func TestAccountTestSuite(t *testing.T) {
 	suite.Run(t, new(AccountTestSuite))
 }

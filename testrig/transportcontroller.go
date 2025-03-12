@@ -66,6 +66,7 @@ type MockHTTPClient struct {
 	TestRemotePeople      map[string]vocab.ActivityStreamsPerson
 	TestRemoteGroups      map[string]vocab.ActivityStreamsGroup
 	TestRemoteServices    map[string]vocab.ActivityStreamsService
+	TestRemoteOutboxes    map[string]vocab.ActivityStreamsOrderedCollection
 	TestRemoteAttachments map[string]RemoteAttachmentFile
 	TestRemoteEmojis      map[string]vocab.TootEmoji
 	TestTombstones        map[string]*gtsmodel.Tombstone
@@ -94,6 +95,7 @@ func NewMockHTTPClient(do func(req *http.Request) (*http.Response, error), relat
 	mockHTTPClient.TestRemotePeople = NewTestFediPeople()
 	mockHTTPClient.TestRemoteGroups = NewTestFediGroups()
 	mockHTTPClient.TestRemoteServices = NewTestFediServices()
+	mockHTTPClient.TestRemoteOutboxes = NewTestFediOutboxes()
 	mockHTTPClient.TestRemoteAttachments = NewTestFediAttachments(relativeMediaPath)
 	mockHTTPClient.TestRemoteEmojis = NewTestFediEmojis()
 	mockHTTPClient.TestTombstones = NewTestTombstones()
@@ -196,6 +198,19 @@ func NewMockHTTPClient(do func(req *http.Request) (*http.Response, error), relat
 			responseBytes = serviceJSON
 			responseContentType = applicationActivityJSON
 			responseContentLength = len(serviceJSON)
+		} else if outbox, ok := mockHTTPClient.TestRemoteOutboxes[reqURLString]; ok {
+			outboxI, err := streams.Serialize(outbox)
+			if err != nil {
+				panic(err)
+			}
+			outboxJSON, err := json.Marshal(outboxI)
+			if err != nil {
+				panic(err)
+			}
+			responseCode = http.StatusOK
+			responseBytes = outboxJSON
+			responseContentType = applicationActivityJSON
+			responseContentLength = len(outboxJSON)
 		} else if emoji, ok := mockHTTPClient.TestRemoteEmojis[reqURLString]; ok {
 			emojiI, err := streams.Serialize(emoji)
 			if err != nil {

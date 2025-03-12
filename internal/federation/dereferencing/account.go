@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/superseriousbusiness/activity/pub"
+	"github.com/superseriousbusiness/activity/streams/vocab"
 	"github.com/superseriousbusiness/gotosocial/internal/ap"
 	"github.com/superseriousbusiness/gotosocial/internal/config"
 	"github.com/superseriousbusiness/gotosocial/internal/db"
@@ -103,15 +104,7 @@ func (d *Dereferencer) GetAccountByURI(ctx context.Context, requestUser string, 
 
 	if accountable != nil {
 		// This account was updated, enqueue re-dereference featured posts + stats.
-		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, account); err != nil {
-				log.Errorf(ctx, "error fetching account featured collection: %v", err)
-			}
-
-			if err := d.dereferenceAccountStats(ctx, requestUser, account); err != nil {
-				log.Errorf(ctx, "error fetching account stats: %v", err)
-			}
-		})
+		d.state.Workers.Dereference.Queue.Push(d.dereferenceAccountTask(requestUser, account))
 	}
 
 	return account, accountable, nil
@@ -215,15 +208,7 @@ func (d *Dereferencer) GetAccountByUsernameDomain(ctx context.Context, requestUs
 
 	if accountable != nil {
 		// This account was updated, enqueue re-dereference featured posts + stats.
-		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, account); err != nil {
-				log.Errorf(ctx, "error fetching account featured collection: %v", err)
-			}
-
-			if err := d.dereferenceAccountStats(ctx, requestUser, account); err != nil {
-				log.Errorf(ctx, "error fetching account stats: %v", err)
-			}
-		})
+		d.state.Workers.Dereference.Queue.Push(d.dereferenceAccountTask(requestUser, account))
 	}
 
 	return account, accountable, nil
@@ -346,15 +331,7 @@ func (d *Dereferencer) RefreshAccount(
 
 	if accountable != nil {
 		// This account was updated, enqueue re-dereference featured posts + stats.
-		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, latest); err != nil {
-				log.Errorf(ctx, "error fetching account featured collection: %v", err)
-			}
-
-			if err := d.dereferenceAccountStats(ctx, requestUser, latest); err != nil {
-				log.Errorf(ctx, "error fetching account stats: %v", err)
-			}
-		})
+		d.state.Workers.Dereference.Queue.Push(d.dereferenceAccountTask(requestUser, account))
 	}
 
 	return latest, accountable, nil
@@ -398,14 +375,7 @@ func (d *Dereferencer) RefreshAccountAsync(
 		}
 
 		if accountable != nil {
-			// This account was updated, enqueue re-dereference featured posts + stats.
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, latest); err != nil {
-				log.Errorf(ctx, "error fetching account featured collection: %v", err)
-			}
-
-			if err := d.dereferenceAccountStats(ctx, requestUser, latest); err != nil {
-				log.Errorf(ctx, "error fetching account stats: %v", err)
-			}
+			d.dereferenceAccountTask(requestUser, latest)(ctx)
 		}
 	})
 }
@@ -1115,6 +1085,26 @@ func (d *Dereferencer) countCollection(
 	return collect.TotalItems(), nil
 }
 
+// dereferenceAccountTask derefs account's pins, stats, and recent outbox as requestUser.
+func (d *Dereferencer) dereferenceAccountTask(requestUser string, account *gtsmodel.Account) func(ctx context.Context) {
+	return func(ctx context.Context) {
+		if err := d.dereferenceAccountFeatured(ctx, requestUser, account); err != nil {
+			log.Errorf(ctx, "error fetching account featured collection: %v", err)
+		}
+
+		if err := d.dereferenceAccountStats(ctx, requestUser, account); err != nil {
+			log.Errorf(ctx, "error fetching account stats: %v", err)
+		}
+
+		// outboxRefreshLimit is the cap on the number of statuses to fetch from an account's outbox when refreshing it.
+		// TODO: (Vyr) make this configurable
+		const outboxRefreshLimit = 20
+		if err := d.dereferenceAccountOutbox(ctx, requestUser, account, outboxRefreshLimit); err != nil {
+			log.Errorf(ctx, "error fetching account outbox: %v", err)
+		}
+	}
+}
+
 // dereferenceAccountFeatured dereferences an account's featuredCollectionURI (if not empty). For each discovered status, this status will
 // be dereferenced (if necessary) and marked as pinned (if necessary). Then, old pins will be removed if they're not included in new pins.
 func (d *Dereferencer) dereferenceAccountFeatured(ctx context.Context, requestUser string, account *gtsmodel.Account) error {
@@ -1222,6 +1212,104 @@ outerLoop:
 			log.Errorf(ctx, "error unpinning status %s: %v", status.URI, err)
 			continue
 		}
+	}
+
+	return nil
+}
+
+// dereferenceAccountOutbox dereferences an account's OutboxURI (if not empty).
+// For each discovered activity that yields a status, that status will be dereferenced (if necessary).
+// Up to limit activities will be fetched and up to limit statuses will be dereferenced.
+// If limit is negative, the entire outbox will be fetched.
+func (d *Dereferencer) dereferenceAccountOutbox(
+	ctx context.Context,
+	requestUser string,
+	account *gtsmodel.Account,
+	limit int,
+) error {
+	uri, err := url.Parse(account.OutboxURI)
+	if err != nil {
+		return err
+	}
+
+	collect, err := d.dereferenceCollection(ctx, requestUser, uri)
+	if err != nil {
+		return err
+	}
+
+	activityLimit := limit
+	statusLimit := limit
+	for {
+		// Get next activity.
+		item := collect.NextItem()
+		if item == nil {
+			break
+		}
+		activityLimit -= 1
+		if activityLimit == 0 {
+			log.Debugf(ctx, "hit the limit of %d activities for outbox %s", limit, account.OutboxURI)
+			return nil
+		}
+
+		// Check for available IRI.
+		itemIRI, _ := pub.ToId(item)
+		if itemIRI == nil {
+			continue
+		}
+
+		if itemIRI.Host != uri.Host {
+			// If this activity doesn't share a host with its outbox
+			// collection URI, we shouldn't trust it. Just move on.
+			continue
+		}
+
+		// Check for available object(s) in the activity.
+		switch activity := item.GetType().(type) {
+		case vocab.ActivityStreamsCreate:
+			objectProp := activity.GetActivityStreamsObject()
+			objectIter := objectProp.Begin()
+			for {
+				if objectIter == nil {
+					break
+				}
+
+				statusable, ok := ap.ToStatusable(objectIter.GetType())
+				if !ok {
+					continue
+				}
+
+				objectIRI, _ := pub.GetId(statusable)
+				if objectIRI == nil {
+					continue
+				}
+
+				if objectIRI.Host != uri.Host {
+					// If this status doesn't share a host with its outbox
+					// collection URI, we shouldn't trust it. Just move on.
+					continue
+				}
+
+				// Search for status by URI. Note this may return an existing model
+				// we have stored with an error from attempted update, so check both.
+				_, _, _, err := d.getStatusByURI(ctx, requestUser, objectIRI)
+				if err != nil {
+					log.Errorf(ctx, "error getting status from outbox %s: %v", objectIRI, err)
+				}
+
+				statusLimit -= 1
+				if statusLimit == 0 {
+					log.Debugf(ctx, "hit the limit of %d statuses for outbox %s", limit, account.OutboxURI)
+					return nil
+				}
+
+				objectIter = objectIter.Next()
+			}
+
+		default:
+			log.Debugf(ctx, "outbox activity %s is not a type we handle: %v", itemIRI, item.GetType().GetTypeName())
+			continue
+		}
+
 	}
 
 	return nil
