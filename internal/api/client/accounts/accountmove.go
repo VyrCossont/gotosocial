@@ -61,16 +61,28 @@ import (
 //		'202':
 //			description: The account move has been accepted and the account will be moved.
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: Unprocessable. Check the response body for more details.
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) AccountMovePOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

@@ -48,12 +48,20 @@ import (
 //				items:
 //					"$ref": "#/definitions/instanceRule"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) InstanceRulesGETHandler(c *gin.Context) {
 	if _, err := apiutil.NegotiateAccept(c, apiutil.JSONAcceptHeaders...); err != nil {

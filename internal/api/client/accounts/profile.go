@@ -50,14 +50,24 @@ import (
 //			schema:
 //				"$ref": "#/definitions/account"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) AccountAvatarDELETEHandler(c *gin.Context) {
 	m.accountDeleteProfileAttachment(c, m.processor.Media().DeleteAvatar)
@@ -85,14 +95,24 @@ func (m *Module) AccountAvatarDELETEHandler(c *gin.Context) {
 //			schema:
 //				"$ref": "#/definitions/account"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) AccountHeaderDELETEHandler(c *gin.Context) {
 	m.accountDeleteProfileAttachment(c, m.processor.Media().DeleteHeader)

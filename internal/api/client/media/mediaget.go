@@ -55,15 +55,25 @@ import (
 //			schema:
 //				"$ref": "#/definitions/attachment"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
-//		   description: internal server error
+//			schema:
+//				"$ref": "#/definitions/error"
+//			description: internal server error
 func (m *Module) MediaGETHandler(c *gin.Context) {
 	if _, errWithCode := apiutil.ParseAPIVersion(
 		c.Param(apiutil.APIVersionKey),

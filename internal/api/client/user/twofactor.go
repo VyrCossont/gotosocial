@@ -55,16 +55,28 @@ const OIDCTwoFactorHelp = "two factor authentication request cannot be processed
 //		'200':
 //			description: QR code png
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'409':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: conflict
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unprocessable entity
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal error
 func (m *Module) TwoFactorQRCodePngGETHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,
@@ -134,16 +146,28 @@ func (m *Module) TwoFactorQRCodePngGETHandler(c *gin.Context) {
 //		'200':
 //			description: QR code uri
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'409':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: conflict
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unprocessable entity
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal error
 func (m *Module) TwoFactorQRCodeURIGETHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,
@@ -216,16 +240,28 @@ func (m *Module) TwoFactorQRCodeURIGETHandler(c *gin.Context) {
 //		'200':
 //			description: QR code
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'409':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: conflict
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unprocessable entity
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal error
 func (m *Module) TwoFactorEnablePOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,
@@ -300,16 +336,28 @@ func (m *Module) TwoFactorEnablePOSTHandler(c *gin.Context) {
 //		'200':
 //			description: QR code
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'409':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: conflict
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unprocessable entity
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal error
 func (m *Module) TwoFactorDisablePOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

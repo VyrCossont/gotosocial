@@ -50,12 +50,20 @@ import (
 //			schema:
 //				"$ref": "#/definitions/headerFilter"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) HeaderFilterAllowPOST(c *gin.Context) {
 	m.createHeaderFilter(c, m.processor.Admin().CreateAllowHeaderFilter)
@@ -90,12 +98,20 @@ func (m *Module) HeaderFilterAllowPOST(c *gin.Context) {
 //			schema:
 //				"$ref": "#/definitions/headerFilter"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) HeaderFilterBlockPOST(c *gin.Context) {
 	m.createHeaderFilter(c, m.processor.Admin().CreateBlockHeaderFilter)

@@ -65,10 +65,16 @@ func New(processor *processing.Processor) *Module {
 //					type: object
 //				maxItems: 0
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 func (m *Module) SuggestionsGETHandler(c *gin.Context) {
 	_, errWithCode := apiutil.TokenAuth(c,

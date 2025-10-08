@@ -43,7 +43,7 @@ import (
 // If an error is returned by InstanceGet, the function will panic.
 func NotFoundHandler(c *gin.Context, instanceGet func(ctx context.Context) (*apimodel.InstanceV1, gtserror.WithCode), accept string, errWithCode gtserror.WithCode) {
 	switch accept {
-	case string(TextHTML):
+	case TextHTML:
 		ctx := c.Request.Context()
 		instance, err := instanceGet(ctx)
 		if err != nil {
@@ -55,8 +55,8 @@ func NotFoundHandler(c *gin.Context, instanceGet func(ctx context.Context) (*api
 			gtscontext.RequestID(ctx),
 		)
 	default:
-		JSON(c, http.StatusNotFound, map[string]string{
-			"error": errWithCode.Safe(),
+		JSON(c, http.StatusNotFound, apimodel.Error{
+			Error: errWithCode.Safe(),
 		})
 	}
 }
@@ -66,7 +66,7 @@ func NotFoundHandler(c *gin.Context, instanceGet func(ctx context.Context) (*api
 // or just some error json if the caller prefers (or has no preference).
 func genericErrorHandler(c *gin.Context, instanceGet func(ctx context.Context) (*apimodel.InstanceV1, gtserror.WithCode), accept string, errWithCode gtserror.WithCode) {
 	switch accept {
-	case string(TextHTML):
+	case TextHTML:
 		ctx := c.Request.Context()
 		instance, err := instanceGet(ctx)
 		if err != nil {
@@ -80,8 +80,8 @@ func genericErrorHandler(c *gin.Context, instanceGet func(ctx context.Context) (
 			gtscontext.RequestID(ctx),
 		)
 	default:
-		JSON(c, errWithCode.Code(), map[string]string{
-			"error": errWithCode.Safe(),
+		JSON(c, errWithCode.Code(), apimodel.Error{
+			Error: errWithCode.Safe(),
 		})
 	}
 }
@@ -179,9 +179,9 @@ func OAuthErrorHandler(c *gin.Context, errWithCode gtserror.WithCode) {
 		l.Debug("handling OAuth error")
 	}
 
-	JSON(c, statusCode, map[string]string{
-		"error":             errWithCode.Error(),
-		"error_description": errWithCode.Safe(),
+	JSON(c, statusCode, apimodel.Error{
+		Error:            errWithCode.Error(),
+		ErrorDescription: errWithCode.Safe(),
 	})
 }
 
@@ -189,8 +189,8 @@ func OAuthErrorHandler(c *gin.Context, errWithCode gtserror.WithCode) {
 // Specifically used for accounts trying to access endpoints they cannot use while moving.
 func NotFoundAfterMove(c *gin.Context) {
 	const errMsg = "your account has Moved or is currently Moving; you cannot use this endpoint"
-	JSON(c, http.StatusForbidden, map[string]string{
-		"error": errMsg,
+	JSON(c, http.StatusForbidden, apimodel.Error{
+		Error: errMsg,
 	})
 }
 
@@ -198,7 +198,7 @@ func NotFoundAfterMove(c *gin.Context) {
 // Specifically used for accounts trying to take actions on endpoints they cannot do while moving.
 func ForbiddenAfterMove(c *gin.Context) {
 	const errMsg = "your account has Moved or is currently Moving; you cannot take create or update type actions"
-	JSON(c, http.StatusForbidden, map[string]string{
-		"error": errMsg,
+	JSON(c, http.StatusForbidden, apimodel.Error{
+		Error: errMsg,
 	})
 }

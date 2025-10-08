@@ -53,16 +53,28 @@ import (
 //			schema:
 //				"$ref": "#/definitions/user"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'409':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: "Conflict: desired email address already in use"
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal error
 func (m *Module) EmailChangePOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

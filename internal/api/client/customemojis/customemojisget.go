@@ -51,10 +51,16 @@ import (
 //				items:
 //					"$ref": "#/definitions/emoji"
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) CustomEmojisGETHandler(c *gin.Context) {
 	// If custom emojis are not exposed to unauthed

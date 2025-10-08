@@ -118,12 +118,20 @@ func (m *Module) Route(attachHandler func(method string, path string, f ...gin.H
 //		'202':
 //			description: Upload accepted.
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) ImportPOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

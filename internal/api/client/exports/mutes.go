@@ -45,10 +45,16 @@ import (
 //			name: accounts
 //			description: CSV file of accounts that you mute.
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) ExportMutesGETHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

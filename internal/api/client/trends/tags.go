@@ -46,6 +46,8 @@ import (
 //					type: object
 //				maxItems: 0
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 func (m *Module) TagsGETHandler(c *gin.Context) {
 	if _, err := apiutil.NegotiateAccept(c, apiutil.JSONAcceptHeaders...); err != nil {

@@ -45,8 +45,12 @@ import (
 //			schema:
 //				"$ref": "#/definitions/instanceV1"
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal error
 func (m *Module) InstanceInformationGETHandlerV1(c *gin.Context) {
 	if _, err := apiutil.NegotiateAccept(c, apiutil.JSONAcceptHeaders...); err != nil {
@@ -97,8 +101,12 @@ func (m *Module) InstanceInformationGETHandlerV1(c *gin.Context) {
 //			schema:
 //				"$ref": "#/definitions/instanceV2"
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal error
 func (m *Module) InstanceInformationGETHandlerV2(c *gin.Context) {
 	if _, err := apiutil.NegotiateAccept(c, apiutil.JSONAcceptHeaders...); err != nil {

@@ -98,8 +98,12 @@ import (
 //					type: string
 //					description: Links to the next and previous queries.
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 func (m *Module) TokensInfoGETHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

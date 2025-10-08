@@ -68,22 +68,36 @@ import (
 //		'202':
 //			description: Test email was sent.
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: >-
 //				An smtp occurred while the email attempt was in progress.
 //				Check the returned json for more information. The smtp error
 //				will be included, to help you debug communication with the
 //				smtp server.
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) EmailTestPOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

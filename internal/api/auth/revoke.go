@@ -66,13 +66,21 @@ import (
 //				OK - If you own the provided token, the API call will provide OK and an empty response `{}`.
 //				This operation is idempotent, so calling this API multiple times will still return OK.
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: >-
 //				forbidden - If you provide a token you do not own, the API call will return a 403 error.
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) TokenRevokePOSTHandler(c *gin.Context) {
 	if _, err := apiutil.NegotiateAccept(c, apiutil.JSONAcceptHeaders...); err != nil {

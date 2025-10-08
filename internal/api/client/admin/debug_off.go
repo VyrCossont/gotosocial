@@ -63,14 +63,24 @@ import (
 //			schema:
 //				"$ref": "#/definitions/debugAPUrlResponse"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) DebugAPUrlHandler(c *gin.Context) {}
 
@@ -95,13 +105,23 @@ func (m *Module) DebugAPUrlHandler(c *gin.Context) {}
 //		'200':
 //			description: All good baby!
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) DebugClearCachesHandler(c *gin.Context) {}

@@ -200,14 +200,24 @@ import (
 //			schema:
 //				"$ref": "#/definitions/defaultPolicies"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unprocessable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) PoliciesDefaultsPATCHHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

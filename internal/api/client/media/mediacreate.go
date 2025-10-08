@@ -84,12 +84,20 @@ import (
 //			schema:
 //				"$ref": "#/definitions/attachment"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unprocessable
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) MediaCreatePOSTHandler(c *gin.Context) {
 	_, errWithCode := apiutil.ParseAPIVersion(

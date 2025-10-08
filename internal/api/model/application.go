@@ -37,7 +37,7 @@ type Application struct {
 	// example: https://example.org/callback?some=query
 	RedirectURI string `json:"redirect_uri,omitempty"`
 	// Post-authorization redirect URIs for the application (OAuth2).
-	// example: [https://example.org/callback?some=query]
+	// example: ["https://example.org/callback?some=query"]
 	RedirectURIs []string `json:"redirect_uris,omitempty"`
 	// Client ID associated with this application.
 	ClientID string `json:"client_id,omitempty"`

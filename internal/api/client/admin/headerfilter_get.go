@@ -45,14 +45,24 @@ import "github.com/gin-gonic/gin"
 //			schema:
 //				"$ref": "#/definitions/headerFilter"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) HeaderFilterAllowGET(c *gin.Context) {
 	m.getHeaderFilter(c, m.processor.Admin().GetAllowHeaderFilter)
@@ -84,14 +94,24 @@ func (m *Module) HeaderFilterAllowGET(c *gin.Context) {
 //			schema:
 //				"$ref": "#/definitions/headerFilter"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) HeaderFilterBlockGET(c *gin.Context) {
 	m.getHeaderFilter(c, m.processor.Admin().GetBlockHeaderFilter)
@@ -117,14 +137,24 @@ func (m *Module) HeaderFilterBlockGET(c *gin.Context) {
 //				items:
 //					"$ref": "#/definitions/headerFilter"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) HeaderFilterAllowsGET(c *gin.Context) {
 	m.getHeaderFilters(c, m.processor.Admin().GetAllowHeaderFilters)
@@ -150,14 +180,24 @@ func (m *Module) HeaderFilterAllowsGET(c *gin.Context) {
 //				items:
 //					"$ref": "#/definitions/headerFilter"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) HeaderFilterBlocksGET(c *gin.Context) {
 	m.getHeaderFilters(c, m.processor.Admin().GetBlockHeaderFilters)

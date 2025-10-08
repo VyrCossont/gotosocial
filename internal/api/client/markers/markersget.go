@@ -60,10 +60,16 @@ import (
 //			schema:
 //				"$ref": "#/definitions/markers"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) MarkersGETHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

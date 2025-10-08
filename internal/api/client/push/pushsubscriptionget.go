@@ -45,12 +45,20 @@ import (
 //			schema:
 //				"$ref": "#/definitions/webPushSubscription"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: This access token doesn't have an associated subscription.
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) PushSubscriptionGETHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,

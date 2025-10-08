@@ -119,20 +119,36 @@ import (
 //			schema:
 //				"$ref": "#/definitions/filterV1"
 //		'400':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: bad request
 //		'401':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unauthorized
 //		'403':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: forbidden to moved accounts
 //		'404':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not found
 //		'406':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: not acceptable
 //		'409':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: conflict (duplicate keyword)
 //		'422':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: unprocessable content
 //		'500':
+//			schema:
+//				"$ref": "#/definitions/error"
 //			description: internal server error
 func (m *Module) FilterPUTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,
