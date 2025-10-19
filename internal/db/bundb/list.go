@@ -20,7 +20,6 @@ package bundb
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 	"time"
 
@@ -358,13 +357,13 @@ func (l *listDB) PopulateListEntry(ctx context.Context, listEntry *gtsmodel.List
 	var err error
 
 	if listEntry.Follow == nil {
-		// ListEntry follow is not set, fetch from the database.
+		// ListEntry follow is not set, fetch from database.
 		listEntry.Follow, err = l.state.DB.GetFollowByID(
 			gtscontext.SetBarebones(ctx),
 			listEntry.FollowID,
 		)
 		if err != nil {
-			return fmt.Errorf("error populating listEntry follow: %w", err)
+			return gtserror.Newf("error populating follow: %w", err)
 		}
 	}
 
@@ -454,6 +453,10 @@ func (l *listDB) DeleteAllListEntriesByFollows(ctx context.Context, followIDs ..
 func (l *listDB) invalidateEntryCaches(ctx context.Context, listIDs, followIDs []string) {
 	var keys []string
 
+	// Anything requested in this func
+	// will only ever be barbones model.
+	ctx = gtscontext.SetBarebones(ctx)
+
 	// Generate ListedID keys to invalidate.
 	keys = slices.Grow(keys[:0], 2*len(listIDs))
 	for _, listID := range listIDs {
@@ -464,6 +467,16 @@ func (l *listDB) invalidateEntryCaches(ctx context.Context, listIDs, followIDs [
 
 		// Invalidate list timeline cache by ID.
 		l.state.Caches.Timelines.List.Clear(listID)
+
+		// Fetch from DB the list by given ID.
+		list, err := l.GetListByID(ctx, listID)
+		if err != nil {
+			log.Errorf(ctx, "error getting list: %v", err)
+			continue
+		}
+
+		// Invalidate home account IDs slice cache for list owner.
+		l.state.Caches.DB.HomeAccountIDs.Invalidate(list.AccountID)
 	}
 
 	// Invalidate ListedID slice cache entries.

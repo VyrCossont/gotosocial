@@ -86,12 +86,14 @@ const (
 	ScopeWriteStatuses          Scope = ScopeWrite + ":" + scopeStatuses
 	ScopeAdminReadAccounts      Scope = ScopeAdminRead + ":" + scopeAccounts
 	ScopeAdminWriteAccounts     Scope = ScopeAdminWrite + ":" + scopeAccounts
-	ScopeAdminReadReports       Scope = ScopeAdminRead + ":" + scopeReports
-	ScopeAdminWriteReports      Scope = ScopeAdminWrite + ":" + scopeReports
+	ScopeAdminReadCustomEmojis  Scope = ScopeAdminRead + ":" + scopeCustomEmojis
+	ScopeAdminWriteCustomEmojis Scope = ScopeAdminWrite + ":" + scopeCustomEmojis
 	ScopeAdminReadDomainAllows  Scope = ScopeAdminRead + ":" + scopeDomainAllows
 	ScopeAdminWriteDomainAllows Scope = ScopeAdminWrite + ":" + scopeDomainAllows
 	ScopeAdminReadDomainBlocks  Scope = ScopeAdminRead + ":" + scopeDomainBlocks
 	ScopeAdminWriteDomainBlocks Scope = ScopeAdminWrite + ":" + scopeDomainBlocks
+	ScopeAdminReadReports       Scope = ScopeAdminRead + ":" + scopeReports
+	ScopeAdminWriteReports      Scope = ScopeAdminWrite + ":" + scopeReports
 )
 
 // Permits returns true if the

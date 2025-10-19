@@ -30,15 +30,15 @@ import (
 // StatusGETHandler serves the target status as an activitystreams NOTE so that other AP servers can parse it.
 func (m *Module) StatusGETHandler(c *gin.Context) {
 	// usernames on our instance are always lowercase
-	requestedUsername := strings.ToLower(c.Param(UsernameKey))
-	if requestedUsername == "" {
+	requestedUser := strings.ToLower(c.Param(apiutil.UsernameKey))
+	if requestedUser == "" {
 		err := errors.New("no username specified in request")
 		apiutil.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGetV1)
 		return
 	}
 
 	// status IDs on our instance are always uppercase
-	requestedStatusID := strings.ToUpper(c.Param(StatusIDKey))
+	requestedStatusID := strings.ToUpper(c.Param(apiutil.IDKey))
 	if requestedStatusID == "" {
 		err := errors.New("no status id specified in request")
 		apiutil.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGetV1)
@@ -53,11 +53,11 @@ func (m *Module) StatusGETHandler(c *gin.Context) {
 
 	if contentType == string(apiutil.TextHTML) {
 		// redirect to the status
-		c.Redirect(http.StatusSeeOther, "/@"+requestedUsername+"/statuses/"+requestedStatusID)
+		c.Redirect(http.StatusSeeOther, "/@"+requestedUser+"/statuses/"+requestedStatusID)
 		return
 	}
 
-	resp, errWithCode := m.processor.Fedi().StatusGet(c.Request.Context(), requestedUsername, requestedStatusID)
+	resp, errWithCode := m.processor.Fedi().StatusGet(c.Request.Context(), requestedUser, requestedStatusID)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return

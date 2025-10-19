@@ -31,7 +31,7 @@ import (
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
-	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub/users"
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
@@ -79,7 +79,7 @@ func (suite *InboxPostTestSuite) inboxPost(
 	)
 
 	// Put the request together.
-	ctx.AddParam(users.UsernameKey, targetAccount.Username)
+	ctx.AddParam(apiutil.UsernameKey, targetAccount.Username)
 	ctx.Request = httptest.NewRequest(http.MethodPost, targetAccount.InboxURI, bytes.NewReader(b))
 	ctx.Request.Header.Set("Signature", signature)
 	ctx.Request.Header.Set("Date", dateHeader)

@@ -75,7 +75,7 @@ import (
 //
 //	security:
 //	- OAuth2 Bearer:
-//		- admin:write
+//		- admin:write:custom_emojis
 //
 //	responses:
 //		'200':
@@ -99,7 +99,7 @@ import (
 func (m *Module) EmojiCreatePOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,
 		true, true, true, true,
-		apiutil.ScopeAdminWrite,
+		apiutil.ScopeAdminWriteCustomEmojis,
 	)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)

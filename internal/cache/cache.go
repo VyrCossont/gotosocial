@@ -96,6 +96,7 @@ func (c *Caches) Init() {
 	c.initFollowRequest()
 	c.initFollowRequestIDs()
 	c.initFollowingTagIDs()
+	c.initHomeAccountIDs()
 	c.initHomeTimelines()
 	c.initInReplyToIDs()
 	c.initInstance()

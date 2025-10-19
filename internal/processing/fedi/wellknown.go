@@ -47,7 +47,7 @@ var (
 	nodeInfoProtocols = []string{"activitypub"}
 	nodeInfoInbound   = []string{}
 	nodeInfoOutbound  = []string{}
-	nodeInfoMetadata  = make(map[string]interface{})
+	nodeInfoMetadata  = make(map[string]any)
 )
 
 // NodeInfoRelGet returns a well known response giving the path to node info.
@@ -156,11 +156,12 @@ func (p *Processor) HostMetaGet() *apimodel.HostMeta {
 }
 
 // WebfingerGet handles the GET for a webfinger resource. Most commonly, it will be used for returning account lookups.
-func (p *Processor) WebfingerGet(ctx context.Context, requestedUsername string) (*apimodel.WellKnownResponse, gtserror.WithCode) {
+func (p *Processor) WebfingerGet(ctx context.Context, requestedUser string) (*apimodel.WellKnownResponse, gtserror.WithCode) {
 	// Get the local account the request is referring to.
-	requestedAccount, err := p.state.DB.GetAccountByUsernameDomain(ctx, requestedUsername, "")
+	requestedAccount, err := p.state.DB.GetAccountByUsernameDomain(ctx, requestedUser, "")
 	if err != nil {
-		return nil, gtserror.NewErrorNotFound(fmt.Errorf("database error getting account with username %s: %s", requestedUsername, err))
+		err := gtserror.Newf("db error getting account %s: %s", requestedUser, err)
+		return nil, gtserror.NewErrorNotFound(err)
 	}
 
 	return &apimodel.WellKnownResponse{

@@ -20,17 +20,14 @@ package publickey
 import (
 	"net/http"
 
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
+
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	// UsernameKey is for account usernames.
-	UsernameKey = "username"
-	// PublicKeyPath is a path to a user's public key, for serving bare minimum AP representations.
-	PublicKeyPath = "users/:" + UsernameKey + "/" + uris.PublicKeyPath
-)
+const PublicKeyPath = "users/:" + apiutil.UsernameKey + "/" + uris.PublicKeyPath
 
 type Module struct {
 	processor *processing.Processor

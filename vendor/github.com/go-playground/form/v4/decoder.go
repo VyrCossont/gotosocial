@@ -19,6 +19,7 @@ type decoder struct {
 	d         *Decoder
 	errs      DecodeErrors
 	dm        dataMap
+	aliasMap  map[string]*recursiveData
 	values    url.Values
 	maxKeyLen int
 	namespace []byte
@@ -32,10 +33,8 @@ func (d *decoder) setError(namespace []byte, err error) {
 }
 
 func (d *decoder) findAlias(ns string) *recursiveData {
-	for i := 0; i < len(d.dm); i++ {
-		if d.dm[i].alias == ns {
-			return d.dm[i]
-		}
+	if d.aliasMap != nil {
+		return d.aliasMap[ns]
 	}
 	return nil
 }
@@ -48,6 +47,12 @@ func (d *decoder) parseMapData() {
 
 	d.maxKeyLen = 0
 	d.dm = d.dm[0:0]
+
+	if d.aliasMap == nil {
+		d.aliasMap = make(map[string]*recursiveData)
+	} else {
+		clear(d.aliasMap)
+	}
 
 	var i int
 	var idx int
@@ -94,6 +99,7 @@ func (d *decoder) parseMapData() {
 					}
 
 					rd.alias = k[:idx]
+					d.aliasMap[rd.alias] = rd
 				}
 
 				// is map + key

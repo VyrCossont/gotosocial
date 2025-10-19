@@ -186,9 +186,9 @@ func (m *Module) rssFeedGETHandler(c *gin.Context) {
 	// Encode response.
 	switch contentType {
 	case apiutil.AppRSSXML:
-		apiutil.XMLType(c, http.StatusOK, appRSSUTF8, &feeds.Rss{feed})
+		apiutil.XMLType(c, http.StatusOK, appRSSUTF8, (&feeds.Rss{feed}).FeedXml())
 	case apiutil.AppAtomXML:
-		apiutil.XMLType(c, http.StatusOK, appAtomUTF8, &feeds.Atom{feed})
+		apiutil.XMLType(c, http.StatusOK, appAtomUTF8, (&feeds.Atom{feed}).FeedXml())
 	case apiutil.AppFeedJSON, apiutil.AppJSON:
 		apiutil.JSONType(c, http.StatusOK, appJSONUTF8, (&feeds.JSON{feed}).JSONFeed())
 	}

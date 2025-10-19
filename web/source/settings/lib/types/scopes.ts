@@ -24,6 +24,7 @@ const scopeApplications  = "applications";
 const scopeBlocks        = "blocks";
 const scopeBookmarks     = "bookmarks";
 const scopeConversations = "conversations";
+const scopeCustomEmojis  = "custom_emojis";
 const scopeDomainAllows  = "domain_allows";
 const scopeDomainBlocks  = "domain_blocks";
 const scopeFavourites    = "favourites";
@@ -58,6 +59,7 @@ export const ScopeWriteBlocks            = ScopeWrite + ":" + scopeBlocks;
 export const ScopeReadBookmarks          = ScopeRead + ":" + scopeBookmarks;
 export const ScopeWriteBookmarks         = ScopeWrite + ":" + scopeBookmarks;
 export const ScopeWriteConversations     = ScopeWrite + ":" + scopeConversations;
+export const ScopeReadCustomEmojis       = ScopeRead + ":" + scopeCustomEmojis;
 export const ScopeReadFavourites         = ScopeRead + ":" + scopeFavourites;
 export const ScopeWriteFavourites        = ScopeWrite + ":" + scopeFavourites;
 export const ScopeReadFilters            = ScopeRead + ":" + scopeFilters;
@@ -77,12 +79,14 @@ export const ScopeReadStatuses           = ScopeRead + ":" + scopeStatuses;
 export const ScopeWriteStatuses          = ScopeWrite + ":" + scopeStatuses;
 export const ScopeAdminReadAccounts      = ScopeAdminRead + ":" + scopeAccounts;
 export const ScopeAdminWriteAccounts     = ScopeAdminWrite + ":" + scopeAccounts;
-export const ScopeAdminReadReports       = ScopeAdminRead + ":" + scopeReports;
-export const ScopeAdminWriteReports      = ScopeAdminWrite + ":" + scopeReports;
+export const ScopeAdminReadCustomEmojis  = ScopeAdminRead + ":" + scopeCustomEmojis;
+export const ScopeAdminWriteCustomEmojis = ScopeAdminWrite + ":" + scopeCustomEmojis;
 export const ScopeAdminReadDomainAllows  = ScopeAdminRead + ":" + scopeDomainAllows;
 export const ScopeAdminWriteDomainAllows = ScopeAdminWrite + ":" + scopeDomainAllows;
 export const ScopeAdminReadDomainBlocks  = ScopeAdminRead + ":" + scopeDomainBlocks;
 export const ScopeAdminWriteDomainBlocks = ScopeAdminWrite + ":" + scopeDomainBlocks;
+export const ScopeAdminReadReports       = ScopeAdminRead + ":" + scopeReports;
+export const ScopeAdminWriteReports      = ScopeAdminWrite + ":" + scopeReports;
 
 export const ValidScopes = [
 	ScopeProfile,
@@ -101,6 +105,7 @@ export const ValidScopes = [
 	ScopeReadBookmarks,
 	ScopeWriteBookmarks,
 	ScopeWriteConversations,
+	ScopeReadCustomEmojis,
 	ScopeReadFavourites,
 	ScopeWriteFavourites,
 	ScopeReadFilters,
@@ -120,12 +125,14 @@ export const ValidScopes = [
 	ScopeWriteStatuses,
 	ScopeAdminReadAccounts,
 	ScopeAdminWriteAccounts,
-	ScopeAdminReadReports,
-	ScopeAdminWriteReports,
+	ScopeAdminReadCustomEmojis,
+	ScopeAdminWriteCustomEmojis,
 	ScopeAdminReadDomainAllows,
 	ScopeAdminWriteDomainAllows,
 	ScopeAdminReadDomainBlocks,
 	ScopeAdminWriteDomainBlocks,
+	ScopeAdminReadReports,
+	ScopeAdminWriteReports,
 ];
 
 export const ValidTopLevelScopes = [

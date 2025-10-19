@@ -197,6 +197,7 @@ func EncodeXMLResponse(
 
 	// Wrap buffer in XML encoder.
 	enc := xml.NewEncoder(buf)
+	enc.Indent("", "  ")
 
 	// Encode JSON data into byte buffer.
 	if err := enc.Encode(data); err == nil {

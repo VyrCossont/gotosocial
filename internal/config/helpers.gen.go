@@ -179,6 +179,7 @@ const (
 	CacheFollowRequestMemRatioFlag                 = "cache-follow-request-mem-ratio"
 	CacheFollowRequestIDsMemRatioFlag              = "cache-follow-request-ids-mem-ratio"
 	CacheFollowingTagIDsMemRatioFlag               = "cache-following-tag-ids-mem-ratio"
+	CacheHomeAccountIDsMemRatioFlag                = "cache-home-account-ids-mem-ratio"
 	CacheInReplyToIDsMemRatioFlag                  = "cache-in-reply-to-ids-mem-ratio"
 	CacheInstanceMemRatioFlag                      = "cache-instance-mem-ratio"
 	CacheInteractionRequestMemRatioFlag            = "cache-interaction-request-mem-ratio"
@@ -377,6 +378,7 @@ func (cfg *Configuration) RegisterFlags(flags *pflag.FlagSet) {
 	flags.Float64("cache-follow-request-mem-ratio", cfg.Cache.FollowRequestMemRatio, "")
 	flags.Float64("cache-follow-request-ids-mem-ratio", cfg.Cache.FollowRequestIDsMemRatio, "")
 	flags.Float64("cache-following-tag-ids-mem-ratio", cfg.Cache.FollowingTagIDsMemRatio, "")
+	flags.Float64("cache-home-account-ids-mem-ratio", cfg.Cache.HomeAccountIDsMemRatio, "")
 	flags.Float64("cache-in-reply-to-ids-mem-ratio", cfg.Cache.InReplyToIDsMemRatio, "")
 	flags.Float64("cache-instance-mem-ratio", cfg.Cache.InstanceMemRatio, "")
 	flags.Float64("cache-interaction-request-mem-ratio", cfg.Cache.InteractionRequestMemRatio, "")
@@ -416,7 +418,7 @@ func (cfg *Configuration) RegisterFlags(flags *pflag.FlagSet) {
 }
 
 func (cfg *Configuration) MarshalMap() map[string]any {
-	cfgmap := make(map[string]any, 195)
+	cfgmap := make(map[string]any, 196)
 	cfgmap["log-level"] = cfg.LogLevel
 	cfgmap["log-format"] = cfg.LogFormat
 	cfgmap["log-timestamp-format"] = cfg.LogTimestampFormat
@@ -567,6 +569,7 @@ func (cfg *Configuration) MarshalMap() map[string]any {
 	cfgmap["cache-follow-request-mem-ratio"] = cfg.Cache.FollowRequestMemRatio
 	cfgmap["cache-follow-request-ids-mem-ratio"] = cfg.Cache.FollowRequestIDsMemRatio
 	cfgmap["cache-following-tag-ids-mem-ratio"] = cfg.Cache.FollowingTagIDsMemRatio
+	cfgmap["cache-home-account-ids-mem-ratio"] = cfg.Cache.HomeAccountIDsMemRatio
 	cfgmap["cache-in-reply-to-ids-mem-ratio"] = cfg.Cache.InReplyToIDsMemRatio
 	cfgmap["cache-instance-mem-ratio"] = cfg.Cache.InstanceMemRatio
 	cfgmap["cache-interaction-request-mem-ratio"] = cfg.Cache.InteractionRequestMemRatio
@@ -1852,6 +1855,14 @@ func (cfg *Configuration) UnmarshalMap(cfgmap map[string]any) error {
 		cfg.Cache.FollowingTagIDsMemRatio, err = cast.ToFloat64E(ival)
 		if err != nil {
 			return fmt.Errorf("error casting %#v -> float64 for 'cache-following-tag-ids-mem-ratio': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["cache-home-account-ids-mem-ratio"]; ok {
+		var err error
+		cfg.Cache.HomeAccountIDsMemRatio, err = cast.ToFloat64E(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> float64 for 'cache-home-account-ids-mem-ratio': %w", ival, err)
 		}
 	}
 
@@ -5536,6 +5547,28 @@ func GetCacheFollowingTagIDsMemRatio() float64 { return global.GetCacheFollowing
 // SetCacheFollowingTagIDsMemRatio safely sets the value for global configuration 'Cache.FollowingTagIDsMemRatio' field
 func SetCacheFollowingTagIDsMemRatio(v float64) { global.SetCacheFollowingTagIDsMemRatio(v) }
 
+// GetCacheHomeAccountIDsMemRatio safely fetches the Configuration value for state's 'Cache.HomeAccountIDsMemRatio' field
+func (st *ConfigState) GetCacheHomeAccountIDsMemRatio() (v float64) {
+	st.mutex.RLock()
+	v = st.config.Cache.HomeAccountIDsMemRatio
+	st.mutex.RUnlock()
+	return v
+}
+
+// SetCacheHomeAccountIDsMemRatio safely sets the Configuration value for state's 'Cache.HomeAccountIDsMemRatio' field
+func (st *ConfigState) SetCacheHomeAccountIDsMemRatio(v float64) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.Cache.HomeAccountIDsMemRatio = v
+	st.reloadToViper()
+}
+
+// GetCacheHomeAccountIDsMemRatio safely fetches the value for global configuration 'Cache.HomeAccountIDsMemRatio' field
+func GetCacheHomeAccountIDsMemRatio() float64 { return global.GetCacheHomeAccountIDsMemRatio() }
+
+// SetCacheHomeAccountIDsMemRatio safely sets the value for global configuration 'Cache.HomeAccountIDsMemRatio' field
+func SetCacheHomeAccountIDsMemRatio(v float64) { global.SetCacheHomeAccountIDsMemRatio(v) }
+
 // GetCacheInReplyToIDsMemRatio safely fetches the Configuration value for state's 'Cache.InReplyToIDsMemRatio' field
 func (st *ConfigState) GetCacheInReplyToIDsMemRatio() (v float64) {
 	st.mutex.RLock()
@@ -6559,6 +6592,7 @@ func (st *ConfigState) GetTotalOfMemRatios() (total float64) {
 	total += st.config.Cache.FollowRequestMemRatio
 	total += st.config.Cache.FollowRequestIDsMemRatio
 	total += st.config.Cache.FollowingTagIDsMemRatio
+	total += st.config.Cache.HomeAccountIDsMemRatio
 	total += st.config.Cache.InReplyToIDsMemRatio
 	total += st.config.Cache.InstanceMemRatio
 	total += st.config.Cache.InteractionRequestMemRatio
@@ -7164,6 +7198,17 @@ func flattenConfigMap(cfgmap map[string]any) {
 		ival, ok := mapGet(cfgmap, key...)
 		if ok {
 			cfgmap["cache-following-tag-ids-mem-ratio"] = ival
+			nestedKeys[key[0]] = struct{}{}
+			break
+		}
+	}
+
+	for _, key := range [][]string{
+		{"cache", "home-account-ids-mem-ratio"},
+	} {
+		ival, ok := mapGet(cfgmap, key...)
+		if ok {
+			cfgmap["cache-home-account-ids-mem-ratio"] = ival
 			nestedKeys[key[0]] = struct{}{}
 			break
 		}

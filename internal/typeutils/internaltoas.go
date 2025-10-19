@@ -2438,8 +2438,8 @@ func (c *Converter) InteractionReqToASAuthorization(
 }
 
 // appendASInteractionAuthorization is a utility function
-// that sets `approvedBy`, and `likeAuthorization`,
-// `replyAuthorization`, or `announceAuthorization`.
+// that sets `approvedBy`, and (if possible) `likeAuthorization`,
+// `replyAuthorization`, and/or `announceAuthorization`.
 func (c *Converter) appendASInteractionAuthorization(
 	ctx context.Context,
 	approvedByURIStr string,
@@ -2458,11 +2458,28 @@ func (c *Converter) appendASInteractionAuthorization(
 		gtscontext.SetBarebones(ctx),
 		approvedByURIStr,
 	)
-	if err != nil {
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		return gtserror.Newf("db error checking for int req: %w", err)
 	}
 
-	// Make sure it's actually accepted.
+	// If the interaction request is nil,
+	// that means we originally sent out
+	// the interaction request impolitely,
+	// and it was accepted impolitely.
+	// Ie., behavior from <= v0.20.0.
+	//
+	// If this is so, just set `approvedBy`
+	// to given approvedByURIStr and bail,
+	// as there's nothing else we can do.
+	if intReq == nil {
+		if wap, ok := t.(ap.WithApprovedBy); ok {
+			ap.SetApprovedBy(wap, approvedByURI)
+		}
+		return nil
+	}
+
+	// Make sure interaction request
+	// has actually been accepted.
 	if !intReq.IsAccepted() {
 		return gtserror.Newf(
 			"approvedByURIStr %s corresponded to not-accepted interaction request %s",

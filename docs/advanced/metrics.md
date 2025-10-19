@@ -37,7 +37,11 @@ OTEL_EXPORTER_PROMETHEUS_PORT=9999
 
 ## Serving metrics to the outside world
 
+### Bare metal, no reverse proxy
+
 If you have deployed GoToSocial in a "bare-metal" fashion without a reverse proxy, you can expose the metrics endpoint to the outside world by setting `OTEL_EXPORTER_PROMETHEUS_HOST` to your host value. For example, if your GtS instance `host` configuration value is set to `example.org`, you should set `OTEL_EXPORTER_PROMETHEUS_HOST=example.org`. You should then be able to access your metrics at `http://example.org:9464/metrics`. GoToSocial running in this fashion will not serve LetsEncrypt certificates at the metrics endpoint, so you will be limited to using HTTP rather than HTTPS.
+
+### Bare metal, with reverse proxy
 
 If you are using a reverse proxy like Nginx, you can expose the metrics endpoint to the outside world with HTTPS certificates, by putting an additional location stanza in your Nginx configuration above the catch-all `location /` stanza:
 
@@ -48,6 +52,10 @@ location /metrics {
 ```
 
 This will instruct Nginx to forward requests to `example.org/metrics` to the separate Prometheus server running on port 9464.
+
+### Docker
+
+If you are running GoToSocial inside a Docker container, to make the metrics endpoint reachable from outside of the container, you will have to set `OTEL_EXPORTER_PROMETHEUS_HOST` to either `0.0.0.0` or the ip address / hostname of the Docker container. If you do not set this, you will only be able to access the metrics endpoint from within the Docker container itself, which is probably not what you want.
 
 ## Enabling basic authentication
 

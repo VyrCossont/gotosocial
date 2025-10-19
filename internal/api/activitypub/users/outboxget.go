@@ -84,8 +84,8 @@ import (
 //			description: not found
 func (m *Module) OutboxGETHandler(c *gin.Context) {
 	// usernames on our instance are always lowercase
-	requestedUsername := strings.ToLower(c.Param(UsernameKey))
-	if requestedUsername == "" {
+	requestedUser := strings.ToLower(c.Param(apiutil.UsernameKey))
+	if requestedUser == "" {
 		err := errors.New("no username specified in request")
 		apiutil.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGetV1)
 		return
@@ -100,7 +100,7 @@ func (m *Module) OutboxGETHandler(c *gin.Context) {
 	if contentType == string(apiutil.TextHTML) {
 		// This isn't an ActivityPub request;
 		// redirect to the user's profile.
-		c.Redirect(http.StatusSeeOther, "/@"+requestedUsername)
+		c.Redirect(http.StatusSeeOther, "/@"+requestedUser)
 		return
 	}
 
@@ -114,7 +114,7 @@ func (m *Module) OutboxGETHandler(c *gin.Context) {
 		return
 	}
 
-	resp, errWithCode := m.processor.Fedi().OutboxGet(c.Request.Context(), requestedUsername, page)
+	resp, errWithCode := m.processor.Fedi().OutboxGet(c.Request.Context(), requestedUser, page)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return

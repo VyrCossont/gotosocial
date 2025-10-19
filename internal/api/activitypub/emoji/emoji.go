@@ -20,16 +20,12 @@ package emoji
 import (
 	"net/http"
 
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	// EmojiIDKey is for emoji IDs
-	EmojiIDKey = "id"
-	// EmojiBasePath is the base path for serving AP Emojis, minus the "emoji" prefix
-	EmojiWithIDPath = "/:" + EmojiIDKey
-)
+const EmojiWithIDPath = "/:" + apiutil.IDKey
 
 type Module struct {
 	processor *processing.Processor

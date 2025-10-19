@@ -27,39 +27,17 @@ import (
 )
 
 const (
-	// UsernameKey is for account usernames.
-	UsernameKey = "username"
-	// StatusIDKey is for status IDs
-	StatusIDKey = "status"
-	// OnlyOtherAccountsKey is for filtering status responses.
-	OnlyOtherAccountsKey = "only_other_accounts"
-	// MinIDKey is for filtering status responses.
-	MinIDKey = "min_id"
-	// MaxIDKey is for filtering status responses.
-	MaxIDKey = "max_id"
-	// PageKey is for filtering status responses.
-	PageKey = "page"
-
-	// BasePath is the base path for serving AP 'users' requests, minus the 'users' prefix.
-	BasePath = "/:" + UsernameKey
-	// InboxPath is for serving POST requests to a user's inbox with the given username key.
-	InboxPath = BasePath + "/" + uris.InboxPath
-	// OutboxPath is for serving GET requests to a user's outbox with the given username key.
-	OutboxPath = BasePath + "/" + uris.OutboxPath
-	// FollowersPath is for serving GET request's to a user's followers list, with the given username key.
-	FollowersPath = BasePath + "/" + uris.FollowersPath
-	// FollowingPath is for serving GET request's to a user's following list, with the given username key.
-	FollowingPath = BasePath + "/" + uris.FollowingPath
-	// FeaturedCollectionPath is for serving GET requests to a user's list of featured (pinned) statuses.
+	OnlyOtherAccountsKey   = "only_other_accounts"
+	BasePath               = "/:" + apiutil.UsernameKey
+	InboxPath              = BasePath + "/" + uris.InboxPath
+	OutboxPath             = BasePath + "/" + uris.OutboxPath
+	FollowersPath          = BasePath + "/" + uris.FollowersPath
+	FollowingPath          = BasePath + "/" + uris.FollowingPath
 	FeaturedCollectionPath = BasePath + "/" + uris.CollectionsPath + "/" + uris.FeaturedPath
-	// StatusPath is for serving GET requests to a particular status by a user, with the given username key and status ID
-	StatusPath = BasePath + "/" + uris.StatusesPath + "/:" + StatusIDKey
-	// StatusRepliesPath is for serving the replies collection of a status.
-	StatusRepliesPath = StatusPath + "/replies"
-	// AcceptPath is for serving accepts of a status.
-	AcceptPath = BasePath + "/" + uris.AcceptsPath + "/:" + apiutil.IDKey
-	// AuthorizationsPath is for serving authorizations of an interaction.
-	AuthorizationsPath = BasePath + "/" + uris.AuthorizationsPath + "/:" + apiutil.IDKey
+	StatusPath             = BasePath + "/" + uris.StatusesPath + "/:" + apiutil.IDKey
+	StatusRepliesPath      = StatusPath + "/replies"
+	AcceptPath             = BasePath + "/" + uris.AcceptsPath + "/:" + apiutil.IDKey
+	AuthorizationsPath     = BasePath + "/" + uris.AuthorizationsPath + "/:" + apiutil.IDKey
 )
 
 type Module struct {

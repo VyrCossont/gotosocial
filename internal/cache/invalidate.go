@@ -155,6 +155,9 @@ func (c *Caches) OnInvalidateFollow(follow *gtsmodel.Follow) {
 	// results for them as mute / visibility result requester.
 	if follow.Account == nil || follow.Account.IsLocal() {
 		localAccountIDs = append(localAccountIDs, follow.AccountID)
+
+		// Also invalidate their home account IDs cache.
+		c.DB.HomeAccountIDs.Invalidate(follow.AccountID)
 	}
 
 	// If target is local (or uncertain), also invalidate
@@ -261,6 +264,10 @@ func (c *Caches) OnInvalidateList(list *gtsmodel.List) {
 		// follow IDs in list.
 		"f"+list.ID,
 	)
+
+	// Invalidate user's home account IDs cache,
+	// as list exclusivity flag may have changed.
+	c.DB.HomeAccountIDs.Invalidate(list.AccountID)
 }
 
 func (c *Caches) OnInvalidateMedia(media *gtsmodel.MediaAttachment) {

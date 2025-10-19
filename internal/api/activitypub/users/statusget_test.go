@@ -27,7 +27,7 @@ import (
 
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
-	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub/users"
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
@@ -59,11 +59,11 @@ func (suite *StatusGetTestSuite) TestGetStatus() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 		gin.Param{
-			Key:   users.StatusIDKey,
+			Key:   apiutil.IDKey,
 			Value: targetStatus.ID,
 		},
 	}
@@ -80,7 +80,7 @@ func (suite *StatusGetTestSuite) TestGetStatus() {
 	suite.NoError(err)
 
 	// should be a Note
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	suite.NoError(err)
 
@@ -118,11 +118,11 @@ func (suite *StatusGetTestSuite) TestGetStatusLowercase() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: strings.ToLower(targetAccount.Username),
 		},
 		gin.Param{
-			Key:   users.StatusIDKey,
+			Key:   apiutil.IDKey,
 			Value: strings.ToLower(targetStatus.ID),
 		},
 	}
@@ -139,7 +139,7 @@ func (suite *StatusGetTestSuite) TestGetStatusLowercase() {
 	suite.NoError(err)
 
 	// should be a Note
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	suite.NoError(err)
 

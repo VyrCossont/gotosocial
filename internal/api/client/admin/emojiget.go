@@ -47,7 +47,7 @@ import (
 //
 //	security:
 //	- OAuth2 Bearer:
-//		- admin:read
+//		- admin:read:custom_emojis
 //
 //	responses:
 //		'200':
@@ -69,7 +69,7 @@ import (
 func (m *Module) EmojiGETHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,
 		true, true, true, true,
-		apiutil.ScopeAdminRead,
+		apiutil.ScopeAdminReadCustomEmojis,
 	)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)

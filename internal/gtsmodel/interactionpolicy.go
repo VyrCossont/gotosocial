@@ -244,6 +244,12 @@ func (pr1 *PolicyRules) DifferentFrom(pr2 *PolicyRules) bool {
 		return true
 	}
 
+	// If they're both nil we don't
+	// need to check anything else.
+	if pr1 == nil && pr2 == nil {
+		return false
+	}
+
 	// Check if AutomaticApproval
 	// differs between the two.
 	if slices.Compare(

@@ -26,11 +26,13 @@
 //   - admin: grants admin access to everything
 //   - admin:read: grants admin read access to everything
 //   - admin:read:accounts: grants admin read access to accounts
+//   - admin:read:custom_emojis: grants admin read access to custom emojis
 //   - admin:read:domain_allows: grants admin read access to domain_allows
 //   - admin:read:domain_blocks: grants admin read access to domain_blocks
 //   - admin:read:reports: grants admin read access to reports
 //   - admin:write: grants admin write access to everything
 //   - admin:write:accounts: grants write read access to accounts
+//   - admin:write:custom_emojis: grants admin write access to custom emojis
 //   - admin:write:domain_allows: grants admin write access to domain_allows
 //   - admin:write:domain_blocks: grants write read access to domain_blocks
 //   - admin:write:reports: grants admin write access to reports
@@ -85,13 +87,15 @@
 //	      admin: grants admin access to everything
 //	      admin:read: grants admin read access to everything
 //	      admin:read:accounts: grants admin read access to accounts
-//	      admin:read:domain_allows: grants admin read access to domain_allows
-//	      admin:read:domain_blocks: grants admin read access to domain_blocks
+//	      admin:read:custom_emojis: grants admin read access to custom emojis
+//	      admin:read:domain_allows: grants admin read access to domain allows
+//	      admin:read:domain_blocks: grants admin read access to domain blocks
 //	      admin:read:reports: grants admin read access to reports
 //	      admin:write: grants admin write access to everything
 //	      admin:write:accounts: grants write read access to accounts
-//	      admin:write:domain_allows: grants admin write access to domain_allows
-//	      admin:write:domain_blocks: grants write read access to domain_blocks
+//	      admin:write:custom_emojis: grants admin write access to custom emojis
+//	      admin:write:domain_allows: grants admin write access to domain allows
+//	      admin:write:domain_blocks: grants write read access to domain blocks
 //	      admin:write:reports: grants admin write access to reports
 //	      profile: grants read access to verify_credentials
 //	      push: grants read/write access to push

@@ -54,9 +54,17 @@ func (f *DB) Like(ctx context.Context, likeable vocab.ActivityStreamsLike) error
 
 	// Convert received AS like type to internal fave model.
 	fave, err := f.converter.ASLikeToFave(ctx, likeable)
-	if err != nil {
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		err := gtserror.Newf("error converting from AS type: %w", err)
 		return gtserror.WrapWithCode(http.StatusBadRequest, err)
+	}
+
+	// If the converted fave is nil that means we
+	// probably didn't have the target status or
+	// account or whatever in the DB, which so we
+	// don't need to do anything with this Like.
+	if fave == nil {
+		return nil
 	}
 
 	// Ensure fave enacted by correct account.
@@ -65,10 +73,12 @@ func (f *DB) Like(ctx context.Context, likeable vocab.ActivityStreamsLike) error
 			requesting.URI, fave.Account.URI)
 	}
 
-	// Ensure fave received by correct account.
+	// If the fave doesn't target the account
+	// receiving the message, just toss it.
+	// We don't (currently) need to handle
+	// Likes of other people's statuses.
 	if fave.TargetAccountID != receiving.ID {
-		return gtserror.NewfWithCode(http.StatusForbidden, "receiver %s is not expected object %s",
-			receiving.URI, fave.TargetAccount.URI)
+		return nil
 	}
 
 	if !*fave.Status.Local {

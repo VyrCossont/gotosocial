@@ -138,15 +138,27 @@ func readOrientation(r *os.File) int {
 		orientationTag = 0x0112
 	)
 
-	// Setup a discard read buffer.
-	buf := new(byteutil.Buffer)
-	buf.Guarantee(32)
+	// Setup a read buffer.
+	var buf byteutil.Buffer
+	buf.B = make([]byte, 0, 64)
 
 	// discard simply reads into buf.
 	discard := func(n int) error {
-		buf.Guarantee(n) // ensure big enough
+		buf.Guarantee(n)
 		_, err := io.ReadFull(r, buf.B[:n])
 		return err
+	}
+
+	// readUint16 reads uint16 bytes into buffer then parses.
+	readUint16 := func(b binary.ByteOrder) (uint16, error) {
+		_, err := io.ReadFull(r, buf.B[:2])
+		return b.Uint16(buf.B[:2]), err
+	}
+
+	// readUint32 reads uint32 bytes into buffer then parses.
+	readUint32 := func(b binary.ByteOrder) (uint32, error) {
+		_, err := io.ReadFull(r, buf.B[:4])
+		return b.Uint32(buf.B[:4]), err
 	}
 
 	// Skip past JPEG SOI marker.
@@ -157,13 +169,13 @@ func readOrientation(r *os.File) int {
 	// Find JPEG
 	// APP1 marker.
 	for {
-		var marker, size uint16
-
-		if err := binary.Read(r, binary.BigEndian, &marker); err != nil {
+		marker, err := readUint16(binary.BigEndian)
+		if err != nil {
 			return orientationUnspecified
 		}
 
-		if err := binary.Read(r, binary.BigEndian, &size); err != nil {
+		size, err := readUint16(binary.BigEndian)
+		if err != nil {
 			return orientationUnspecified
 		}
 
@@ -184,11 +196,9 @@ func readOrientation(r *os.File) int {
 		}
 	}
 
-	// Check if EXIF
-	// header is present.
-	var header uint32
-
-	if err := binary.Read(r, binary.BigEndian, &header); err != nil {
+	// Check if EXIF header is present.
+	header, err := readUint32(binary.BigEndian)
+	if err != nil {
 		return orientationUnspecified
 	}
 
@@ -200,17 +210,13 @@ func readOrientation(r *os.File) int {
 		return orientationUnspecified
 	}
 
-	// Read byte
-	// order info.
-	var (
-		byteOrderTag uint16
-		byteOrder    binary.ByteOrder
-	)
-
-	if err := binary.Read(r, binary.BigEndian, &byteOrderTag); err != nil {
+	// Read byte order info.
+	byteOrderTag, err := readUint16(binary.BigEndian)
+	if err != nil {
 		return orientationUnspecified
 	}
 
+	var byteOrder binary.ByteOrder
 	switch byteOrderTag {
 	case byteOrderBE:
 		byteOrder = binary.BigEndian
@@ -224,11 +230,9 @@ func readOrientation(r *os.File) int {
 		return orientationUnspecified
 	}
 
-	// Skip the
-	// EXIF offset.
-	var offset uint32
-
-	if err := binary.Read(r, byteOrder, &offset); err != nil {
+	// Skip the EXIF offset.
+	offset, err := readUint32(byteOrder)
+	if err != nil {
 		return orientationUnspecified
 	}
 
@@ -240,19 +244,16 @@ func readOrientation(r *os.File) int {
 		return orientationUnspecified
 	}
 
-	// Read the
-	// number of tags.
-	var numTags uint16
-
-	if err := binary.Read(r, byteOrder, &numTags); err != nil {
+	// Read the number of tags.
+	numTags, err := readUint16(byteOrder)
+	if err != nil {
 		return orientationUnspecified
 	}
 
 	// Find the orientation tag.
 	for i := 0; i < int(numTags); i++ {
-		var tag uint16
-
-		if err := binary.Read(r, byteOrder, &tag); err != nil {
+		tag, err := readUint16(byteOrder)
+		if err != nil {
 			return orientationUnspecified
 		}
 
@@ -267,9 +268,8 @@ func readOrientation(r *os.File) int {
 			return orientationUnspecified
 		}
 
-		var val uint16
-
-		if err := binary.Read(r, byteOrder, &val); err != nil {
+		val, err := readUint16(byteOrder)
+		if err != nil {
 			return orientationUnspecified
 		}
 

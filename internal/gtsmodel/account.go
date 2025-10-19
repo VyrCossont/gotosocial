@@ -392,6 +392,12 @@ func (a *Account) IsSuspended() bool {
 	return !a.SuspendedAt.IsZero()
 }
 
+// DeletedSelf returns true
+// if account deleted itself.
+func (a *Account) DeletedSelf() bool {
+	return a.SuspensionOrigin == a.ID
+}
+
 // IsMoving returns true if
 // account is Moving or has Moved.
 func (a *Account) IsMoving() bool {

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
+	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"github.com/gin-gonic/gin"
 	"github.com/ulule/limiter/v3"
@@ -78,30 +79,43 @@ func RateLimit(limit int, except []netip.Prefix) gin.HandlerFunc {
 		// Use Gin's heuristic for determining
 		// clientIP, which accounts for reverse
 		// proxies and trusted proxies setting.
-		clientIP := netip.MustParseAddr(c.ClientIP())
+		clientIP := c.ClientIP()
+
+		// ClientIP must be parseable.
+		ip, err := netip.ParseAddr(clientIP)
+		if err != nil {
+			log.Warnf(
+				c.Request.Context(),
+				"cannot do rate limiting for this request as client IP %s could not be parsed;"+
+					" your upstream reverse proxy may be misconfigured: %v",
+				clientIP, err,
+			)
+			c.Next()
+			return
+		}
 
 		// Check if this IP is exempt from rate
 		// limits and skip further checks if so.
 		for _, prefix := range except {
-			if prefix.Contains(clientIP) {
+			if prefix.Contains(ip) {
 				c.Next()
 				return
 			}
 		}
 
-		if clientIP.Is6() {
+		if ip.Is6() {
 			// Convert to "net" package IP for mask.
-			asIP := net.IP(clientIP.AsSlice())
+			asIP := net.IP(ip.AsSlice())
 
 			// Apply coarse IPv6 mask.
 			asIP = asIP.Mask(ipv6Mask)
 
 			// Convert back to netip.Addr from net.IP.
-			clientIP, _ = netip.AddrFromSlice(asIP)
+			ip, _ = netip.AddrFromSlice(asIP)
 		}
 
 		// Fetch rate limit info for this (masked) clientIP.
-		context, err := limiter.Get(c, clientIP.String())
+		context, err := limiter.Get(c, ip.String())
 		if err != nil {
 			// Since we use an in-memory cache now,
 			// it's actually impossible for this to

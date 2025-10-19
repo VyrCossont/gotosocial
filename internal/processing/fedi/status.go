@@ -26,6 +26,7 @@ import (
 
 	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
+	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/log"
@@ -33,9 +34,13 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
-// StatusGet handles the getting of a fedi/activitypub representation of a local status.
+// StatusGet handles getting an AP representation of a local status.
 // It performs appropriate authentication before returning a JSON serializable interface.
-func (p *Processor) StatusGet(ctx context.Context, requestedUser string, statusID string) (interface{}, gtserror.WithCode) {
+func (p *Processor) StatusGet(
+	ctx context.Context,
+	requestedUser string,
+	statusID string,
+) (any, gtserror.WithCode) {
 	// Authenticate incoming request, getting related accounts.
 	auth, errWithCode := p.authenticate(ctx, requestedUser)
 	if errWithCode != nil {
@@ -49,16 +54,23 @@ func (p *Processor) StatusGet(ctx context.Context, requestedUser string, statusI
 		err := gtserror.Newf("network race handshaking %s", auth.handshakingURI)
 		return nil, gtserror.NewErrorInternalError(err)
 	}
-
-	receivingAcct := auth.receivingAcct
-	requestingAcct := auth.requestingAcct
+	receiver := auth.receiver
+	requester := auth.requester
 
 	status, err := p.state.DB.GetStatusByID(ctx, statusID)
-	if err != nil {
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		err := gtserror.Newf("db error getting status: %w", err)
+		return nil, gtserror.NewErrorInternalError(err)
+	}
+
+	if status == nil {
+		// TODO: Update this to serve "gone"
+		// when a status has been deleted.
+		err := gtserror.Newf("status %s not found in the db", statusID)
 		return nil, gtserror.NewErrorNotFound(err)
 	}
 
-	if status.AccountID != receivingAcct.ID {
+	if status.AccountID != receiver.ID {
 		const text = "status does not belong to receiving account"
 		return nil, gtserror.NewErrorNotFound(errors.New(text))
 	}
@@ -68,7 +80,7 @@ func (p *Processor) StatusGet(ctx context.Context, requestedUser string, statusI
 		return nil, gtserror.NewErrorNotFound(errors.New(text))
 	}
 
-	visible, err := p.visFilter.StatusVisible(ctx, requestingAcct, status)
+	visible, err := p.visFilter.StatusVisible(ctx, requester, status)
 	if err != nil {
 		return nil, gtserror.NewErrorInternalError(err)
 	}
@@ -93,7 +105,7 @@ func (p *Processor) StatusGet(ctx context.Context, requestedUser string, statusI
 	return data, nil
 }
 
-// GetStatus handles the getting of a fedi/activitypub representation of replies to a status,
+// GetStatus handles getting an AP representation of replies to a status,
 // performing appropriate authentication before returning a JSON serializable interface to the caller.
 func (p *Processor) StatusRepliesGet(
 	ctx context.Context,
@@ -101,7 +113,7 @@ func (p *Processor) StatusRepliesGet(
 	statusID string,
 	page *paging.Page,
 	onlyOtherAccounts bool,
-) (interface{}, gtserror.WithCode) {
+) (any, gtserror.WithCode) {
 	// Authenticate incoming request, getting related accounts.
 	auth, errWithCode := p.authenticate(ctx, requestedUser)
 	if errWithCode != nil {
@@ -116,8 +128,8 @@ func (p *Processor) StatusRepliesGet(
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
-	receivingAcct := auth.receivingAcct
-	requestingAcct := auth.requestingAcct
+	receivingAcct := auth.receiver
+	requestingAcct := auth.requester
 
 	// Get target status and ensure visible to requester.
 	status, errWithCode := p.c.GetVisibleTargetStatus(ctx,

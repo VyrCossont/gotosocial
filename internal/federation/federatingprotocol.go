@@ -198,38 +198,56 @@ func (f *Federator) AuthenticatePostInbox(ctx context.Context, w http.ResponseWr
 	// account by parsing username from `/users/{username}/inbox`.
 	username, err := uris.ParseInboxPath(r.URL)
 	if err != nil {
-		err = gtserror.Newf("could not parse %s as inbox path: %w", r.URL.String(), err)
+		err := gtserror.Newf("could not parse %s as inbox path: %w", r.URL.String(), err)
 		return nil, false, err
 	}
 
 	if username == "" {
-		err = gtserror.New("inbox username was empty")
+		err := gtserror.New("inbox username was empty")
 		return nil, false, err
 	}
 
-	receivingAccount, err := f.db.GetAccountByUsernameDomain(ctx, username, "")
-	if err != nil {
-		err = gtserror.Newf("could not fetch receiving account %s: %w", username, err)
+	// Get the receiving local account inbox
+	// owner with given username from database.
+	receiver, err := f.db.GetAccountByUsernameDomain(ctx, username, "")
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		err := gtserror.Newf("db error getting receiving account %s: %w", username, err)
 		return nil, false, err
+	}
+
+	if receiver == nil {
+		// Maybe we had this account at some point and someone
+		// manually deleted it from the DB. Just return not found.
+		err := gtserror.Newf("receiving account %s not found in the db", username)
+		errWithCode := gtserror.NewErrorNotFound(err)
+		return ctx, false, errWithCode
 	}
 
 	// Check who's trying to deliver to us by inspecting the http signature.
-	pubKeyAuth, errWithCode := f.AuthenticateFederatedRequest(ctx, receivingAccount.Username)
+	pubKeyAuth, errWithCode := f.AuthenticateFederatedRequest(ctx, receiver.Username)
 	if errWithCode != nil {
-		switch errWithCode.Code() {
-		case http.StatusUnauthorized, http.StatusForbidden, http.StatusBadRequest:
-			// If codes 400, 401, or 403, obey the go-fed
-			// interface by writing the header and bailing.
-			w.WriteHeader(errWithCode.Code())
-		case http.StatusGone:
-			// If the requesting account's key has gone
-			// (410) then likely inbox post was a delete.
+
+		// Check if we got code 410 Gone from a remote
+		// instance while trying to dereference the pub
+		// key owner who's trying to post to this inbox,
+		// or if we already had a tombstone stored for them.
+		if gtserror.StatusCode(errWithCode) == http.StatusGone {
+			// If the pub key owner's key/account has
+			// gone, then inbox post was likely a Delete.
 			//
-			// We can just write 202 and leave: we didn't
-			// know about the account anyway, so we can't
-			// do any further processing.
+			// If so, we can just write 202 and leave, as
+			// either we'll have already processed any Deletes
+			// sent by this account, or we never met the account
+			// in the first place so we don't have any of their
+			// stuff stored to actually delete.
 			w.WriteHeader(http.StatusAccepted)
+			return ctx, false, nil
 		}
+
+		// In all other cases, obey the go-fed
+		// interface by writing the status
+		// code from the returned ErrWithCode.
+		w.WriteHeader(errWithCode.Code())
 
 		// We still return the error
 		// for later request logging.
@@ -247,7 +265,11 @@ func (f *Federator) AuthenticatePostInbox(ctx context.Context, w http.ResponseWr
 	// We have everything we need now, set the requesting
 	// and receiving accounts on the context for later use.
 	ctx = gtscontext.SetRequestingAccount(ctx, pubKeyAuth.Owner)
-	ctx = gtscontext.SetReceivingAccount(ctx, receivingAccount)
+	ctx = gtscontext.SetReceivingAccount(ctx, receiver)
+
+	// Note: we do not check here yet whether requesting
+	// account has been suspended or self-deleted, as that
+	// is handled in *federatingActor.PostInboxScheme
 	return ctx, true, nil
 }
 
@@ -290,7 +312,7 @@ func (f *Federator) Blocked(ctx context.Context, actorIRIs []*url.URL) (bool, er
 	// then we can save some work.
 	blocked, err := f.db.AreURIsBlocked(ctx, actorIRIs)
 	if err != nil {
-		err = gtserror.Newf("error checking domain blocks of actorIRIs: %w", err)
+		err := gtserror.Newf("error checking domain blocks of actorIRIs: %w", err)
 		return false, err
 	}
 
@@ -302,7 +324,7 @@ func (f *Federator) Blocked(ctx context.Context, actorIRIs []*url.URL) (bool, er
 	// Now user level blocks. Receiver should not block requester.
 	blocked, err = f.db.IsBlocked(ctx, receivingAccount.ID, requestingAccount.ID)
 	if err != nil {
-		err = gtserror.Newf("db error checking block between receiver and requester: %w", err)
+		err := gtserror.Newf("db error checking block between receiver and requester: %w", err)
 		return false, err
 	}
 
@@ -358,7 +380,7 @@ func (f *Federator) Blocked(ctx context.Context, actorIRIs []*url.URL) (bool, er
 		)
 		if err != nil && !errors.Is(err, db.ErrNoEntries) {
 			// Real db error.
-			err = gtserror.Newf("db error trying to get %s as account: %w", iriStr, err)
+			err := gtserror.Newf("db error trying to get %s as account: %w", iriStr, err)
 			return false, err
 		} else if err == nil {
 			// IRI is for an account.
@@ -373,7 +395,7 @@ func (f *Federator) Blocked(ctx context.Context, actorIRIs []*url.URL) (bool, er
 		)
 		if err != nil && !errors.Is(err, db.ErrNoEntries) {
 			// Real db error.
-			err = gtserror.Newf("db error trying to get %s as status: %w", iriStr, err)
+			err := gtserror.Newf("db error trying to get %s as status: %w", iriStr, err)
 			return false, err
 		} else if err == nil {
 			// IRI is for a status.
@@ -395,9 +417,9 @@ func (f *Federator) Blocked(ctx context.Context, actorIRIs []*url.URL) (bool, er
 		// account they have blocked. In this case, it's v. unlikely
 		// they care to see the boost in their timeline, so there's
 		// no point in us processing it.
-		blocked, err = f.db.IsBlocked(ctx, receivingAccount.ID, accountID)
+		blocked, err := f.db.IsBlocked(ctx, receivingAccount.ID, accountID)
 		if err != nil {
-			err = gtserror.Newf("db error checking block between receiver and other account: %w", err)
+			err := gtserror.Newf("db error checking block between receiver and other account: %w", err)
 			return false, err
 		}
 
@@ -418,9 +440,9 @@ func (f *Federator) Blocked(ctx context.Context, actorIRIs []*url.URL) (bool, er
 		// accounts are gossiping about + trying to tag a third account
 		// who has one or the other of them blocked.
 		if iriHost == ourHost {
-			blocked, err = f.db.IsBlocked(ctx, accountID, requestingAccount.ID)
+			blocked, err := f.db.IsBlocked(ctx, accountID, requestingAccount.ID)
 			if err != nil {
-				err = gtserror.Newf("db error checking block between other account and requester: %w", err)
+				err := gtserror.Newf("db error checking block between other account and requester: %w", err)
 				return false, err
 			}
 

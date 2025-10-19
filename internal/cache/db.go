@@ -145,6 +145,10 @@ type DBCaches struct {
 	//
 	FollowingTagIDs SliceCache[string]
 
+	// HomeAccountIDs provides access to the account IDs present in an account's
+	// home timeline, bearing in mind that some may be part of exclusive lists.
+	HomeAccountIDs SliceCache[string]
+
 	// Instance provides access to the gtsmodel Instance database cache.
 	Instance StructCache[*gtsmodel.Instance]
 
@@ -881,6 +885,17 @@ func (c *Caches) initFollowingTagIDs() {
 	log.Infof(nil, "cache size = %d", cap)
 
 	c.DB.FollowingTagIDs.Init(0, cap)
+}
+
+func (c *Caches) initHomeAccountIDs() {
+	// Calculate maximum cache size.
+	cap := calculateSliceCacheMax(
+		config.GetCacheHomeAccountIDsMemRatio(),
+	)
+
+	log.Infof(nil, "cache size = %d", cap)
+
+	c.DB.HomeAccountIDs.Init(0, cap)
 }
 
 func (c *Caches) initInReplyToIDs() {

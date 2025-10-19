@@ -27,6 +27,7 @@ import (
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub/users"
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
@@ -57,7 +58,7 @@ func (suite *UserGetTestSuite) TestGetUser() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 	}
@@ -74,7 +75,7 @@ func (suite *UserGetTestSuite) TestGetUser() {
 	suite.NoError(err)
 
 	// should be a Person
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	suite.NoError(err)
 
@@ -125,7 +126,7 @@ func (suite *UserGetTestSuite) TestGetUserPublicKeyDeleted() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 	}
@@ -142,7 +143,7 @@ func (suite *UserGetTestSuite) TestGetUserPublicKeyDeleted() {
 	suite.NoError(err)
 
 	// should be a Person
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	suite.NoError(err)
 

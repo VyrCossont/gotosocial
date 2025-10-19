@@ -34,7 +34,7 @@ func (m *Module) customCSSGETHandler(c *gin.Context) {
 		return
 	}
 
-	targetUsername, errWithCode := apiutil.ParseUsername(c.Param(apiutil.UsernameKey))
+	requestedUser, errWithCode := apiutil.ParseUsername(c.Param(apiutil.UsernameKey))
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return
@@ -45,7 +45,7 @@ func (m *Module) customCSSGETHandler(c *gin.Context) {
 	// when custom CSS gets toggled on or off.
 	var customCSS string
 	if config.GetAccountsAllowCustomCSS() {
-		customCSS, errWithCode = m.processor.Account().GetCustomCSSForUsername(c.Request.Context(), targetUsername)
+		customCSS, errWithCode = m.processor.Account().GetCustomCSSForUsername(c.Request.Context(), requestedUser)
 		if errWithCode != nil {
 			apiutil.WebErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 			return

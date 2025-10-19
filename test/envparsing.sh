@@ -49,6 +49,7 @@ EXPECT=$(cat << "EOF"
     "cache-follow-request-ids-mem-ratio": 2,
     "cache-follow-request-mem-ratio": 2,
     "cache-following-tag-ids-mem-ratio": 2,
+    "cache-home-account-ids-mem-ratio": 2,
     "cache-in-reply-to-ids-mem-ratio": 3,
     "cache-instance-mem-ratio": 1,
     "cache-interaction-request-mem-ratio": 1,

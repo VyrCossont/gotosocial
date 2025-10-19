@@ -28,7 +28,7 @@ import (
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
-	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub/users"
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -61,11 +61,11 @@ func (suite *RepliesGetTestSuite) TestGetReplies() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 		gin.Param{
-			Key:   users.StatusIDKey,
+			Key:   apiutil.IDKey,
 			Value: targetStatus.ID,
 		},
 	}
@@ -96,7 +96,7 @@ func (suite *RepliesGetTestSuite) TestGetReplies() {
 	})
 	assert.Equal(suite.T(), expect, string(b))
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	assert.NoError(suite.T(), err)
 
@@ -129,11 +129,11 @@ func (suite *RepliesGetTestSuite) TestGetRepliesNext() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 		gin.Param{
-			Key:   users.StatusIDKey,
+			Key:   apiutil.IDKey,
 			Value: targetStatus.ID,
 		},
 	}
@@ -167,7 +167,7 @@ func (suite *RepliesGetTestSuite) TestGetRepliesNext() {
 	})
 	assert.Equal(suite.T(), expect, string(b))
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	assert.NoError(suite.T(), err)
 
@@ -202,11 +202,11 @@ func (suite *RepliesGetTestSuite) TestGetRepliesLast() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 		gin.Param{
-			Key:   users.StatusIDKey,
+			Key:   apiutil.IDKey,
 			Value: targetStatus.ID,
 		},
 	}
@@ -238,7 +238,7 @@ func (suite *RepliesGetTestSuite) TestGetRepliesLast() {
 	})
 	assert.Equal(suite.T(), expect, string(b))
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	assert.NoError(suite.T(), err)
 

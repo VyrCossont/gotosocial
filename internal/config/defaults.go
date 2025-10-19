@@ -200,6 +200,7 @@ var Defaults = Configuration{
 		FollowRequestMemRatio:                 2,
 		FollowRequestIDsMemRatio:              2,
 		FollowingTagIDsMemRatio:               2,
+		HomeAccountIDsMemRatio:                2,
 		InReplyToIDsMemRatio:                  3,
 		InstanceMemRatio:                      1,
 		InteractionRequestMemRatio:            1,

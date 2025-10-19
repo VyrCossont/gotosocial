@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 
 	"codeberg.org/gruf/go-mempool"
@@ -83,6 +84,11 @@ type Timeline[StructType any, PK cmp.Ordered] struct {
 	// types by user defined sets of fields.
 	indices []Index
 
+	// atomically updated head
+	// / tail primary key values.
+	headPK unsafe.Pointer
+	tailPK unsafe.Pointer
+
 	// protective mutex, guards:
 	// - Timeline{}.*
 	// - Index{}.data
@@ -148,6 +154,16 @@ func (t *Timeline[T, PK]) Index(name string) *Index {
 		}
 	}
 	panic("unknown index: " + name)
+}
+
+// Head returns the current head primary key.
+func (t *Timeline[T, PK]) Head() *PK {
+	return (*PK)(atomic.LoadPointer(&t.headPK))
+}
+
+// Tail returns the current tail primary key.
+func (t *Timeline[T, PK]) Tail() *PK {
+	return (*PK)(atomic.LoadPointer(&t.tailPK))
 }
 
 // Select allows you to retrieve a slice of values, in order, from the timeline.
@@ -570,6 +586,10 @@ func (t *Timeline[T, PK]) Trim(max int, dir Direction) {
 			bottom := t.list.tail
 			if bottom == nil {
 
+				// Zero head + tail primary keys.
+				atomic.StorePointer(&t.headPK, nil)
+				atomic.StorePointer(&t.tailPK, nil)
+
 				// reached
 				// end.
 				break
@@ -588,6 +608,10 @@ func (t *Timeline[T, PK]) Trim(max int, dir Direction) {
 			// Get top list elem.
 			top := t.list.head
 			if top == nil {
+
+				// Zero head + tail primary keys.
+				atomic.StorePointer(&t.headPK, nil)
+				atomic.StorePointer(&t.tailPK, nil)
 
 				// reached
 				// end.
@@ -1034,6 +1058,15 @@ func (t *Timeline[T, PK]) store_one(last *list_elem, value value_with_pk[T, PK])
 	goto indexing
 
 indexing:
+	// Set new head / tail
+	// primary key values.
+	switch last {
+	case t.list.head:
+		atomic.StorePointer(&t.headPK, value.kptr)
+	case t.list.tail:
+		atomic.StorePointer(&t.tailPK, value.kptr)
+	}
+
 	// Append already-extracted
 	// primary key to 0th index.
 	_ = idx0.add(key, i_item)

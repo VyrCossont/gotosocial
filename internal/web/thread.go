@@ -19,8 +19,6 @@ package web
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -47,14 +45,14 @@ func (m *Module) threadGETHandler(c *gin.Context) {
 		return instance, nil
 	}
 
-	// Parse account targetUsername and status ID from the URL.
-	targetUsername, errWithCode := apiutil.ParseUsername(c.Param(apiutil.UsernameKey))
+	// Parse account requestedUser and status ID from the URL.
+	requestedUser, errWithCode := apiutil.ParseUsername(c.Param(apiutil.UsernameKey))
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
 		return
 	}
 
-	targetStatusID, errWithCode := apiutil.ParseWebStatusID(c.Param(apiutil.WebStatusIDKey))
+	statusID, errWithCode := apiutil.ParseWebStatusID(c.Param(apiutil.WebStatusIDKey))
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
 		return
@@ -67,8 +65,8 @@ func (m *Module) threadGETHandler(c *gin.Context) {
 	//
 	// todo: Update this logic when different username patterns
 	// are allowed, and/or when status slugs are introduced.
-	targetUsername = strings.ToLower(targetUsername)
-	targetStatusID = strings.ToUpper(targetStatusID)
+	requestedUser = strings.ToLower(requestedUser)
+	statusID = strings.ToUpper(statusID)
 
 	// Check what type of content is being requested. If we're getting an AP
 	// request on this endpoint we should render the AP representation instead.
@@ -78,38 +76,44 @@ func (m *Module) threadGETHandler(c *gin.Context) {
 		return
 	}
 
-	if accept == string(apiutil.AppActivityJSON) || accept == string(apiutil.AppActivityLDJSON) {
+	if apiutil.ASContentType(accept) {
 		// AP status representation has been requested.
-		m.returnAPStatus(c, targetUsername, targetStatusID, accept, instanceGet)
+		status, errWithCode := m.processor.Fedi().StatusGet(c.Request.Context(), requestedUser, statusID)
+		if errWithCode != nil {
+			apiutil.WebErrorHandler(c, errWithCode, instanceGet)
+			return
+		}
+
+		apiutil.JSONType(c, http.StatusOK, accept, status)
 		return
 	}
 
 	// text/html has been requested. Proceed with getting the web view of the status.
 
 	// Fetch the target account so we can do some checks on it.
-	targetAccount, errWithCode := m.processor.Account().GetWeb(ctx, targetUsername)
+	acct, errWithCode := m.processor.Account().GetWeb(ctx, requestedUser)
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
 		return
 	}
 
-	// If target account is suspended, this page should not be visible.
-	if targetAccount.Suspended {
-		err := fmt.Errorf("target account %s is suspended", targetUsername)
+	// If requested account is suspended, this page should not be visible.
+	if acct.Suspended {
+		err := gtserror.Newf("account %s is suspended", requestedUser)
 		apiutil.WebErrorHandler(c, gtserror.NewErrorNotFound(err), instanceGet)
 		return
 	}
 
-	// Get the thread context. This will fetch the target status as well.
-	context, errWithCode := m.processor.Status().WebContextGet(ctx, targetStatusID)
+	// Get the thread context. This will fetch the status as well.
+	context, errWithCode := m.processor.Status().WebContextGet(ctx, statusID)
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
 		return
 	}
 
-	// Ensure status actually belongs to target account.
-	if context.Status.Account.ID != targetAccount.ID {
-		err := fmt.Errorf("target account %s does not own status %s", targetUsername, targetStatusID)
+	// Ensure status actually belongs to requested account.
+	if context.Status.Account.ID != acct.ID {
+		err := gtserror.Newf("account %s does not own status %s", requestedUser, statusID)
 		apiutil.WebErrorHandler(c, gtserror.NewErrorNotFound(err), instanceGet)
 		return
 	}
@@ -128,7 +132,7 @@ func (m *Module) threadGETHandler(c *gin.Context) {
 	)
 
 	// User-selected theme if set.
-	if theme := targetAccount.Theme; theme != "" {
+	if theme := acct.Theme; theme != "" {
 		stylesheets = append(
 			stylesheets,
 			themesPathPrefix+"/"+theme,
@@ -138,7 +142,7 @@ func (m *Module) threadGETHandler(c *gin.Context) {
 	// Custom CSS for this user last in cascade.
 	stylesheets = append(
 		stylesheets,
-		"/@"+targetAccount.Username+"/custom.css",
+		"/@"+acct.Username+"/custom.css",
 	)
 
 	page := apiutil.WebPage{
@@ -163,29 +167,4 @@ func (m *Module) threadGETHandler(c *gin.Context) {
 	}
 
 	apiutil.TemplateWebPage(c, page)
-}
-
-// returnAPStatus returns an ActivityPub representation of target status,
-// created by targetUsername. It will do http signature authentication.
-func (m *Module) returnAPStatus(
-	c *gin.Context,
-	targetUsername string,
-	targetStatusID string,
-	accept string,
-	instanceGet func(ctx context.Context) (*apimodel.InstanceV1, gtserror.WithCode),
-) {
-	status, errWithCode := m.processor.Fedi().StatusGet(c.Request.Context(), targetUsername, targetStatusID)
-	if errWithCode != nil {
-		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
-		return
-	}
-
-	b, err := json.Marshal(status)
-	if err != nil {
-		err := gtserror.Newf("could not marshal json: %w", err)
-		apiutil.WebErrorHandler(c, gtserror.NewErrorInternalError(err), instanceGet)
-		return
-	}
-
-	c.Data(http.StatusOK, accept, b)
 }

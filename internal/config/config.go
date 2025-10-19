@@ -240,6 +240,7 @@ type CacheConfiguration struct {
 	FollowRequestMemRatio                 float64       `name:"follow-request-mem-ratio"`
 	FollowRequestIDsMemRatio              float64       `name:"follow-request-ids-mem-ratio"`
 	FollowingTagIDsMemRatio               float64       `name:"following-tag-ids-mem-ratio"`
+	HomeAccountIDsMemRatio                float64       `name:"home-account-ids-mem-ratio"`
 	InReplyToIDsMemRatio                  float64       `name:"in-reply-to-ids-mem-ratio"`
 	InstanceMemRatio                      float64       `name:"instance-mem-ratio"`
 	InteractionRequestMemRatio            float64       `name:"interaction-request-mem-ratio"`

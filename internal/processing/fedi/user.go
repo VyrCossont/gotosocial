@@ -20,96 +20,83 @@ package fedi
 import (
 	"context"
 	"errors"
-	"fmt"
-	"net/url"
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
+	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/uris"
 )
 
-// UserGet handles the getting of a fedi/activitypub representation of a user/account,
-// performing authentication before returning a JSON serializable interface to the caller.
-func (p *Processor) UserGet(ctx context.Context, requestedUsername string, requestURL *url.URL) (interface{}, gtserror.WithCode) {
-	// (Try to) get the requested local account from the db.
-	receiver, err := p.state.DB.GetAccountByUsernameDomain(ctx, requestedUsername, "")
-	if err != nil {
-		if errors.Is(err, db.ErrNoEntries) {
-			// Account just not found w/ this username.
-			err := fmt.Errorf("account with username %s not found in the db", requestedUsername)
-			return nil, gtserror.NewErrorNotFound(err)
-		}
-
-		// Real db error.
-		err := fmt.Errorf("db error getting account with username %s: %w", requestedUsername, err)
-		return nil, gtserror.NewErrorInternalError(err)
-	}
-
-	if uris.IsPublicKeyPath(requestURL) {
-		// If request is on a public key path, we don't need to
-		// authenticate this request. However, we'll only serve
-		// the bare minimum user profile needed for the pubkey.
-		//
-		// TODO: https://codeberg.org/superseriousbusiness/gotosocial/issues/1186
-		minimalPerson, err := p.converter.AccountToASMinimal(ctx, receiver)
-		if err != nil {
-			err := gtserror.Newf("error converting to minimal account: %w", err)
-			return nil, gtserror.NewErrorInternalError(err)
-		}
-
-		// Return early with bare minimum data.
-		return data(minimalPerson)
-	}
-
-	// If the request is not on a public key path, we want to
-	// try to authenticate it before we serve any data, so that
-	// we can serve a more complete profile.
-	pubKeyAuth, errWithCode := p.federator.AuthenticateFederatedRequest(ctx, requestedUsername)
+// UserGet handles getting an AP representation of an account.
+// It does auth before returning a JSON serializable interface to the caller.
+func (p *Processor) UserGet(
+	ctx context.Context,
+	requestedUser string,
+) (any, gtserror.WithCode) {
+	// Authenticate incoming request, getting related accounts.
+	//
+	// We may currently be handshaking with the remote account
+	// making the request. Unlike with other fedi endpoints,
+	// don't bother checking this; if we're still handshaking
+	// just serve the AP representation of our account anyway.
+	//
+	// This ensures that we don't get stuck in a loop with another
+	// GtS instance, where each instance is trying repeatedly to
+	// dereference the other account that's making the request
+	// before it will reveal its own account.
+	//
+	// Instead, we end up in an 'I'll show you mine if you show me
+	// yours' situation, where we sort of agree to reveal each
+	// other's profiles at the same time.
+	auth, errWithCode := p.authenticate(ctx, requestedUser)
 	if errWithCode != nil {
-		return nil, errWithCode // likely 401
+		return nil, errWithCode
 	}
 
-	// Auth passed, generate the proper AP representation.
-	accountable, err := p.converter.AccountToAS(ctx, receiver)
+	// Generate the proper AP representation.
+	accountable, err := p.converter.AccountToAS(ctx, auth.receiver)
 	if err != nil {
-		err := gtserror.Newf("error converting account: %w", err)
+		err := gtserror.Newf("error converting to accountable: %w", err)
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
-	if pubKeyAuth.Handshaking {
-		// If we are currently handshaking with the remote account
-		// making the request, then don't be coy: just serve the AP
-		// representation of the target account.
-		//
-		// This handshake check ensures that we don't get stuck in
-		// a loop with another GtS instance, where each instance is
-		// trying repeatedly to dereference the other account that's
-		// making the request before it will reveal its own account.
-		//
-		// Instead, we end up in an 'I'll show you mine if you show me
-		// yours' situation, where we sort of agree to reveal each
-		// other's profiles at the same time.
-		return data(accountable)
-	}
-
-	// Get requester from auth.
-	requester := pubKeyAuth.Owner
-
-	// Check that block does not exist between receiver and requester.
-	blocked, err := p.state.DB.IsBlocked(ctx, receiver.ID, requester.ID)
+	data, err := ap.Serialize(accountable)
 	if err != nil {
-		err := gtserror.Newf("error checking block: %w", err)
+		err := gtserror.Newf("error serializing accountable: %w", err)
 		return nil, gtserror.NewErrorInternalError(err)
-	} else if blocked {
-		const text = "block exists between accounts"
-		return nil, gtserror.NewErrorForbidden(errors.New(text))
 	}
 
-	return data(accountable)
+	return data, nil
 }
 
-func data(accountable ap.Accountable) (interface{}, gtserror.WithCode) {
+// UserGetMinimal returns a minimal AP representation
+// of the requested account, containing just the public
+// key, without doing authentication.
+func (p *Processor) UserGetMinimal(
+	ctx context.Context,
+	requestedUser string,
+) (any, gtserror.WithCode) {
+	acct, err := p.state.DB.GetAccountByUsernameDomain(
+		gtscontext.SetBarebones(ctx),
+		requestedUser, "",
+	)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		err := gtserror.Newf("db error getting account %s: %w", requestedUser, err)
+		return nil, gtserror.NewErrorInternalError(err)
+	}
+
+	if acct == nil {
+		err := gtserror.Newf("account %s not found in the db", requestedUser)
+		return nil, gtserror.NewErrorNotFound(err)
+	}
+
+	// Generate minimal AP representation.
+	accountable, err := p.converter.AccountToASMinimal(ctx, acct)
+	if err != nil {
+		err := gtserror.Newf("error converting to accountable: %w", err)
+		return nil, gtserror.NewErrorInternalError(err)
+	}
+
 	data, err := ap.Serialize(accountable)
 	if err != nil {
 		err := gtserror.Newf("error serializing accountable: %w", err)

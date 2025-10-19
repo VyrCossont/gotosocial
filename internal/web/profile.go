@@ -19,7 +19,6 @@ package web
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -63,27 +62,32 @@ func (m *Module) prepareProfile(c *gin.Context) *profile {
 	}
 
 	// Parse + normalize account username from the URL.
-	requestedUsername, errWithCode := apiutil.ParseUsername(c.Param(apiutil.UsernameKey))
+	requestedUser, errWithCode := apiutil.ParseUsername(c.Param(apiutil.UsernameKey))
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
 		return nil
 	}
-	requestedUsername = strings.ToLower(requestedUsername)
+	requestedUser = strings.ToLower(requestedUser)
 
 	// Check what type of content is being requested.
 	// If we're getting an AP request on this endpoint
 	// we should render the AP representation instead.
-	contentType, err := apiutil.NegotiateAccept(c, apiutil.HTMLOrActivityPubHeaders...)
+	accept, err := apiutil.NegotiateAccept(c, apiutil.HTMLOrActivityPubHeaders...)
 	if err != nil {
 		apiutil.WebErrorHandler(c, gtserror.NewErrorNotAcceptable(err, err.Error()), instanceGet)
 		return nil
 	}
 
-	if contentType == string(apiutil.AppActivityJSON) ||
-		contentType == string(apiutil.AppActivityLDJSON) {
+	if apiutil.ASContentType(accept) {
 		// AP account representation has
 		// been requested, return that.
-		m.returnAPAccount(c, requestedUsername, contentType)
+		user, errWithCode := m.processor.Fedi().UserGet(c.Request.Context(), requestedUser)
+		if errWithCode != nil {
+			apiutil.WebErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
+			return nil
+		}
+
+		apiutil.JSONType(c, http.StatusOK, accept, user)
 		return nil
 	}
 
@@ -91,7 +95,7 @@ func (m *Module) prepareProfile(c *gin.Context) *profile {
 	//
 	// Proceed with getting the web
 	// representation of the account.
-	account, errWithCode := m.processor.Account().GetWeb(ctx, requestedUsername)
+	account, errWithCode := m.processor.Account().GetWeb(ctx, requestedUser)
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
 		return nil
@@ -102,7 +106,7 @@ func (m *Module) prepareProfile(c *gin.Context) *profile {
 	//
 	// TODO: change this to 410?
 	if account.Suspended {
-		err := fmt.Errorf("target account %s is suspended", requestedUsername)
+		err := gtserror.Newf("target account %s is suspended", requestedUser)
 		apiutil.WebErrorHandler(c, gtserror.NewErrorNotFound(err), instanceGet)
 		return nil
 	}
@@ -341,20 +345,4 @@ func (m *Module) profileGallery(c *gin.Context, p *profile) {
 	}
 
 	apiutil.TemplateWebPage(c, page)
-}
-
-// returnAPAccount returns an ActivityPub representation of
-// target account. It will do http signature authentication.
-func (m *Module) returnAPAccount(
-	c *gin.Context,
-	targetUsername string,
-	contentType string,
-) {
-	user, errWithCode := m.processor.Fedi().UserGet(c.Request.Context(), targetUsername, c.Request.URL)
-	if errWithCode != nil {
-		apiutil.WebErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
-		return
-	}
-
-	apiutil.JSONType(c, http.StatusOK, contentType, user)
 }

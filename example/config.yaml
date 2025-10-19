@@ -1114,7 +1114,6 @@ tracing-enabled: false
 # With these variables set, a Prometheus metrics endpoint will be exposed at
 # localhost:9464/metrics. This can be further configured using the variables:
 #
-# - OTEL_EXPORTER_OTLP_METRICS_PROTOCOL
 # - OTEL_EXPORTER_PROMETHEUS_HOST
 # - OTEL_EXPORTER_PROMETHEUS_PORT
 #

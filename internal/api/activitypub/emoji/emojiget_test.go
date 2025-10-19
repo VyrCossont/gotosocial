@@ -25,6 +25,7 @@ import (
 
 	"code.superseriousbusiness.org/gotosocial/internal/admin"
 	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub/emoji"
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/email"
 	"code.superseriousbusiness.org/gotosocial/internal/federation"
@@ -122,7 +123,7 @@ func (suite *EmojiGetTestSuite) TestGetEmoji() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   emoji.EmojiIDKey,
+			Key:   apiutil.IDKey,
 			Value: targetEmoji.ID,
 		},
 	}

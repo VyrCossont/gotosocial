@@ -240,3 +240,9 @@ func whereArrayIsNullOrEmpty(query *bun.SelectQuery, subject interface{}) *bun.S
 			WhereOr(arrayEmptySQL, subject)
 	})
 }
+
+// accountIDValue is a convenience struct for using
+// CTE's to provide accountIDs to select statuses of.
+type accountIDValue struct {
+	AccountID string `bun:"type:CHAR(26)"`
+}

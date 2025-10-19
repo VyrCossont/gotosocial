@@ -387,6 +387,9 @@ func (t *StatusTimeline) Load(
 				return nil, "", "", gtserror.Newf("error loading statuses: %w", err)
 			}
 
+			// Update nextPg cursor parameter for database query.
+			nextPageParams(nextPg, metas[len(metas)-1].ID, order)
+
 			// Prepare frontend API models for
 			// the cached statuses. For now this
 			// also does its own extra filtering.
@@ -533,6 +536,13 @@ func (t *StatusTimeline) InsertOne(status *gtsmodel.Status, prepared *apimodel.S
 	// If timeline no preloaded, i.e.
 	// no-one using it, don't insert.
 	if !t.preloader.Check() {
+		return false
+	}
+
+	// If item is beyond end of the
+	// timeline, don't bother adding.
+	if tailID := t.cache.Tail(); //
+	tailID == nil || status.ID < *tailID {
 		return false
 	}
 

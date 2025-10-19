@@ -28,7 +28,7 @@ import (
 
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
-	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub/users"
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
@@ -59,7 +59,7 @@ func (suite *OutboxGetTestSuite) TestGetOutbox() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 	}
@@ -85,7 +85,7 @@ func (suite *OutboxGetTestSuite) TestGetOutbox() {
   "type": "OrderedCollection"
 }`, dst.String())
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	suite.NoError(err)
 
@@ -117,7 +117,7 @@ func (suite *OutboxGetTestSuite) TestGetOutboxFirstPage() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 	}
@@ -172,7 +172,7 @@ func (suite *OutboxGetTestSuite) TestGetOutboxFirstPage() {
   "type": "OrderedCollectionPage"
 }`, dst.String())
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	suite.NoError(err)
 
@@ -204,11 +204,11 @@ func (suite *OutboxGetTestSuite) TestGetOutboxNextPage() {
 	// but because we're calling the function directly, we need to set them manually.
 	ctx.Params = gin.Params{
 		gin.Param{
-			Key:   users.UsernameKey,
+			Key:   apiutil.UsernameKey,
 			Value: targetAccount.Username,
 		},
 		gin.Param{
-			Key:   users.MaxIDKey,
+			Key:   apiutil.MaxIDKey,
 			Value: "01F8MHAMCHF6Y650WCRSCP4WMY",
 		},
 	}
@@ -235,7 +235,7 @@ func (suite *OutboxGetTestSuite) TestGetOutboxNextPage() {
   "type": "OrderedCollectionPage"
 }`, dst.String())
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	err = json.Unmarshal(b, &m)
 	suite.NoError(err)
 
@@ -261,7 +261,7 @@ func checkDropPublished(t *testing.T, b []byte, at ...string) []byte {
 	entries := make([]map[string]any, 0)
 	for _, key := range at {
 		switch vt := m[key].(type) {
-		case []interface{}:
+		case []any:
 			for _, t := range vt {
 				if entry, ok := t.(map[string]any); ok {
 					entries = append(entries, entry)

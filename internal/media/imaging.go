@@ -21,6 +21,8 @@ import (
 	"image"
 	"image/color"
 	"math"
+
+	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 )
 
 // NOTE:
@@ -73,15 +75,15 @@ func resizeDownLinear(img image.Image, width, height int) image.Image {
 
 // flipH flips the image horizontally (left to right).
 func flipH(img image.Image) image.Image {
-	src := newScanner(img)
-	dstW := src.w
-	dstH := src.h
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dstW := srcW
+	dstH := srcH
 	rowSize := dstW * 4
 	dst := image.NewNRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		i := y * dst.Stride
 		srcY := y
-		src.scan(0, srcY, src.w, srcY+1, dst.Pix[i:i+rowSize])
+		scanImage(img, 0, srcY, srcW, srcY+1, dst.Pix[i:i+rowSize])
 		reverse(dst.Pix[i : i+rowSize])
 	}
 	return dst
@@ -89,45 +91,45 @@ func flipH(img image.Image) image.Image {
 
 // flipV flips the image vertically (from top to bottom).
 func flipV(img image.Image) image.Image {
-	src := newScanner(img)
-	dstW := src.w
-	dstH := src.h
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dstW := srcW
+	dstH := srcH
 	rowSize := dstW * 4
 	dst := image.NewNRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		i := y * dst.Stride
 		srcY := dstH - y - 1
-		src.scan(0, srcY, src.w, srcY+1, dst.Pix[i:i+rowSize])
+		scanImage(img, 0, srcY, srcW, srcY+1, dst.Pix[i:i+rowSize])
 	}
 	return dst
 }
 
 // rotate90 rotates the image 90 counter-clockwise.
 func rotate90(img image.Image) image.Image {
-	src := newScanner(img)
-	dstW := src.h
-	dstH := src.w
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dstW := srcH
+	dstH := srcW
 	rowSize := dstW * 4
 	dst := image.NewNRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		i := y * dst.Stride
 		srcX := dstH - y - 1
-		src.scan(srcX, 0, srcX+1, src.h, dst.Pix[i:i+rowSize])
+		scanImage(img, srcX, 0, srcX+1, srcH, dst.Pix[i:i+rowSize])
 	}
 	return dst
 }
 
 // rotate180 rotates the image 180 counter-clockwise.
 func rotate180(img image.Image) image.Image {
-	src := newScanner(img)
-	dstW := src.w
-	dstH := src.h
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dstW := srcW
+	dstH := srcH
 	rowSize := dstW * 4
 	dst := image.NewNRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		i := y * dst.Stride
 		srcY := dstH - y - 1
-		src.scan(0, srcY, src.w, srcY+1, dst.Pix[i:i+rowSize])
+		scanImage(img, 0, srcY, srcW, srcY+1, dst.Pix[i:i+rowSize])
 		reverse(dst.Pix[i : i+rowSize])
 	}
 	return dst
@@ -135,15 +137,15 @@ func rotate180(img image.Image) image.Image {
 
 // rotate270 rotates the image 270 counter-clockwise.
 func rotate270(img image.Image) image.Image {
-	src := newScanner(img)
-	dstW := src.h
-	dstH := src.w
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dstW := srcH
+	dstH := srcW
 	rowSize := dstW * 4
 	dst := image.NewNRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		i := y * dst.Stride
 		srcX := y
-		src.scan(srcX, 0, srcX+1, src.h, dst.Pix[i:i+rowSize])
+		scanImage(img, srcX, 0, srcX+1, srcH, dst.Pix[i:i+rowSize])
 		reverse(dst.Pix[i : i+rowSize])
 	}
 	return dst
@@ -151,30 +153,30 @@ func rotate270(img image.Image) image.Image {
 
 // transpose flips the image horizontally and rotates 90 counter-clockwise.
 func transpose(img image.Image) image.Image {
-	src := newScanner(img)
-	dstW := src.h
-	dstH := src.w
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dstW := srcH
+	dstH := srcW
 	rowSize := dstW * 4
 	dst := image.NewNRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		i := y * dst.Stride
 		srcX := y
-		src.scan(srcX, 0, srcX+1, src.h, dst.Pix[i:i+rowSize])
+		scanImage(img, srcX, 0, srcX+1, srcH, dst.Pix[i:i+rowSize])
 	}
 	return dst
 }
 
 // transverse flips the image vertically and rotates 90 counter-clockwise.
 func transverse(img image.Image) image.Image {
-	src := newScanner(img)
-	dstW := src.h
-	dstH := src.w
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dstW := srcH
+	dstH := srcW
 	rowSize := dstW * 4
 	dst := image.NewNRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		i := y * dst.Stride
 		srcX := dstH - y - 1
-		src.scan(srcX, 0, srcX+1, src.h, dst.Pix[i:i+rowSize])
+		scanImage(img, srcX, 0, srcX+1, srcH, dst.Pix[i:i+rowSize])
 		reverse(dst.Pix[i : i+rowSize])
 	}
 	return dst
@@ -182,12 +184,12 @@ func transverse(img image.Image) image.Image {
 
 // resizeHorizontalLinear resizes image to given width using linear resampling.
 func resizeHorizontalLinear(img image.Image, dstWidth int) image.Image {
-	src := newScanner(img)
-	dst := image.NewRGBA(image.Rect(0, 0, dstWidth, src.h))
-	weights := precomputeWeightsLinear(dstWidth, src.w)
-	scanLine := make([]uint8, src.w*4)
-	for y := 0; y < src.h; y++ {
-		src.scan(0, y, src.w, y+1, scanLine)
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dst := image.NewRGBA(image.Rect(0, 0, dstWidth, srcH))
+	weights := precomputeWeightsLinear(dstWidth, srcW)
+	scanLine := make([]uint8, srcW*4)
+	for y := 0; y < srcH; y++ {
+		scanImage(img, 0, y, srcW, y+1, scanLine)
 		j0 := y * dst.Stride
 		for x := range weights {
 			var r, g, b, a float64
@@ -201,13 +203,12 @@ func resizeHorizontalLinear(img image.Image, dstWidth int) image.Image {
 				a += aw
 			}
 			if a != 0 {
-				aInv := 1 / a
 				j := j0 + x*4
 				d := dst.Pix[j : j+4 : j+4]
-				d[0] = clampFloat(r * aInv)
-				d[1] = clampFloat(g * aInv)
-				d[2] = clampFloat(b * aInv)
-				d[3] = clampFloat(a)
+				d[0] = clampFloatTo8(r / a)
+				d[1] = clampFloatTo8(g / a)
+				d[2] = clampFloatTo8(b / a)
+				d[3] = clampFloatTo8(a)
 			}
 		}
 	}
@@ -216,12 +217,12 @@ func resizeHorizontalLinear(img image.Image, dstWidth int) image.Image {
 
 // resizeVerticalLinear resizes image to given height using linear resampling.
 func resizeVerticalLinear(img image.Image, height int) image.Image {
-	src := newScanner(img)
-	dst := image.NewNRGBA(image.Rect(0, 0, src.w, height))
-	weights := precomputeWeightsLinear(height, src.h)
-	scanLine := make([]uint8, src.h*4)
-	for x := 0; x < src.w; x++ {
-		src.scan(x, 0, x+1, src.h, scanLine)
+	srcW, srcH := img.Bounds().Dx(), img.Bounds().Dy()
+	dst := image.NewNRGBA(image.Rect(0, 0, srcW, height))
+	weights := precomputeWeightsLinear(height, srcH)
+	scanLine := make([]uint8, srcH*4)
+	for x := 0; x < srcW; x++ {
+		scanImage(img, x, 0, x+1, srcH, scanLine)
 		for y := range weights {
 			var r, g, b, a float64
 			for _, w := range weights[y] {
@@ -234,13 +235,12 @@ func resizeVerticalLinear(img image.Image, height int) image.Image {
 				a += aw
 			}
 			if a != 0 {
-				aInv := 1 / a
 				j := y*dst.Stride + x*4
 				d := dst.Pix[j : j+4 : j+4]
-				d[0] = clampFloat(r * aInv)
-				d[1] = clampFloat(g * aInv)
-				d[2] = clampFloat(b * aInv)
-				d[3] = clampFloat(a)
+				d[0] = clampFloatTo8(r / a)
+				d[1] = clampFloatTo8(g / a)
+				d[2] = clampFloatTo8(b / a)
+				d[3] = clampFloatTo8(a)
 			}
 		}
 	}
@@ -263,13 +263,14 @@ func precomputeWeightsLinear(dstSize, srcSize int) [][]indexWeight {
 	out := make([][]indexWeight, dstSize)
 	tmp := make([]indexWeight, 0, dstSize*int(ru+2)*2)
 
-	for v := 0; v < dstSize; v++ {
+	for v := 0; v < len(out); v++ {
 		fu := (float64(v)+0.5)*du - 0.5
 
 		begin := int(math.Ceil(fu - ru))
 		if begin < 0 {
 			begin = 0
 		}
+
 		end := int(math.Floor(fu + ru))
 		if end > srcSize-1 {
 			end = srcSize - 1
@@ -280,9 +281,13 @@ func precomputeWeightsLinear(dstSize, srcSize int) [][]indexWeight {
 			w := resampleLinear((float64(u) - fu) / scale)
 			if w != 0 {
 				sum += w
-				tmp = append(tmp, indexWeight{index: u, weight: w})
+				tmp = append(tmp, indexWeight{
+					index:  u,
+					weight: w,
+				})
 			}
 		}
+
 		if sum != 0 {
 			for i := range tmp {
 				tmp[i].weight /= sum
@@ -305,204 +310,209 @@ func resampleLinear(x float64) float64 {
 	return 0
 }
 
-// scanner wraps an image.Image for
-// easier size access and image type
-// agnostic access to data at coords.
-type scanner struct {
-	image   image.Image
-	w, h    int
-	palette []color.NRGBA
+// scan scans the given rectangular region of the image into dst.
+func scanImage(img image.Image, x1, y1, x2, y2 int, dst []uint8) {
+	switch img := img.(type) {
+	case *image.NRGBA:
+		scanNRGBA(img, x1, y1, x2, y2, dst)
+	case *image.NRGBA64:
+		scanNRGBA64(img, x1, y1, x2, y2, dst)
+	case *image.RGBA:
+		scanRGBA(img, x1, y1, x2, y2, dst)
+	case *image.RGBA64:
+		scanRGBA64(img, x1, y1, x2, y2, dst)
+	case *image.Gray:
+		scanGray(img, x1, y1, x2, y2, dst)
+	case *image.Gray16:
+		scanGray16(img, x1, y1, x2, y2, dst)
+	case *image.YCbCr:
+		scanYCbCr(img, x1, y1, x2, y2, dst)
+	case *image.Paletted:
+		scanPaletted(img, x1, y1, x2, y2, dst)
+	default:
+		scanAny(img, x1, y1, x2, y2, dst)
+	}
 }
 
-// newScanner wraps an image.Image in scanner{} type.
-func newScanner(img image.Image) *scanner {
-	b := img.Bounds()
-	s := &scanner{
-		image: img,
-
-		w: b.Dx(),
-		h: b.Dy(),
-	}
-	if img, ok := img.(*image.Paletted); ok {
-		s.palette = make([]color.NRGBA, len(img.Palette))
-		for i := 0; i < len(img.Palette); i++ {
-			s.palette[i] = color.NRGBAModel.Convert(img.Palette[i]).(color.NRGBA)
+func scanNRGBA(img *image.NRGBA, x1, y1, x2, y2 int, dst []uint8) {
+	size := (x2 - x1) * 4
+	j := 0
+	i := y1*img.Stride + x1*4
+	if size == 4 {
+		for y := y1; y < y2; y++ {
+			d := dst[j : j+4 : j+4]
+			s := img.Pix[i : i+4 : i+4]
+			d[0] = s[0]
+			d[1] = s[1]
+			d[2] = s[2]
+			d[3] = s[3]
+			j += size
+			i += img.Stride
+		}
+	} else {
+		for y := y1; y < y2; y++ {
+			copy(dst[j:j+size], img.Pix[i:i+size])
+			j += size
+			i += img.Stride
 		}
 	}
-	return s
 }
 
-// scan scans the given rectangular region of the image into dst.
-func (s *scanner) scan(x1, y1, x2, y2 int, dst []uint8) {
-	switch img := s.image.(type) {
-	case *image.NRGBA:
-		size := (x2 - x1) * 4
-		j := 0
-		i := y1*img.Stride + x1*4
-		if size == 4 {
-			for y := y1; y < y2; y++ {
-				d := dst[j : j+4 : j+4]
+func scanNRGBA64(img *image.NRGBA64, x1, y1, x2, y2 int, dst []uint8) {
+	if img == nil {
+		panic(gtserror.New("nil check elimination"))
+	}
+	j := 0
+	for y := y1; y < y2; y++ {
+		i := y*img.Stride + x1*8
+		for x := x1; x < x2; x++ {
+			s := img.Pix[i : i+8 : i+8]
+			d := dst[j : j+4 : j+4]
+			d[0] = s[0]
+			d[1] = s[2]
+			d[2] = s[4]
+			d[3] = s[6]
+			j += 4
+			i += 8
+		}
+	}
+}
+
+func scanRGBA(img *image.RGBA, x1, y1, x2, y2 int, dst []uint8) {
+	if img == nil {
+		panic(gtserror.New("nil check elimination"))
+	}
+	j := 0
+	for y := y1; y < y2; y++ {
+		i := y*img.Stride + x1*4
+		for x := x1; x < x2; x++ {
+			d := dst[j : j+4 : j+4]
+			a := img.Pix[i+3]
+			switch a {
+			case 0:
+				d[0] = 0
+				d[1] = 0
+				d[2] = 0
+				d[3] = a
+			case 0xff:
 				s := img.Pix[i : i+4 : i+4]
 				d[0] = s[0]
 				d[1] = s[1]
 				d[2] = s[2]
-				d[3] = s[3]
-				j += size
-				i += img.Stride
+				d[3] = a
+			default:
+				s := img.Pix[i : i+4 : i+4]
+				r16 := uint16(s[0])
+				g16 := uint16(s[1])
+				b16 := uint16(s[2])
+				a16 := uint16(a)
+				d[0] = uint8(r16 * 0xff / a16) // #nosec G115 -- Overflow desired.
+				d[1] = uint8(g16 * 0xff / a16) // #nosec G115 -- Overflow desired.
+				d[2] = uint8(b16 * 0xff / a16) // #nosec G115 -- Overflow desired.
+				d[3] = a
 			}
-		} else {
-			for y := y1; y < y2; y++ {
-				copy(dst[j:j+size], img.Pix[i:i+size])
-				j += size
-				i += img.Stride
-			}
+			j += 4
+			i += 4
 		}
+	}
+}
 
-	case *image.NRGBA64:
-		j := 0
-		for y := y1; y < y2; y++ {
-			i := y*img.Stride + x1*8
-			for x := x1; x < x2; x++ {
-				s := img.Pix[i : i+8 : i+8]
-				d := dst[j : j+4 : j+4]
+func scanRGBA64(img *image.RGBA64, x1, y1, x2, y2 int, dst []uint8) {
+	if img == nil {
+		panic(gtserror.New("nil check elimination"))
+	}
+	j := 0
+	for y := y1; y < y2; y++ {
+		i := y*img.Stride + x1*8
+		for x := x1; x < x2; x++ {
+			s := img.Pix[i : i+8 : i+8]
+			d := dst[j : j+4 : j+4]
+			a := s[6]
+			switch a {
+			case 0:
+				d[0] = 0
+				d[1] = 0
+				d[2] = 0
+			case 0xff:
 				d[0] = s[0]
 				d[1] = s[2]
 				d[2] = s[4]
-				d[3] = s[6]
-				j += 4
-				i += 8
+			default:
+				r32 := uint32(s[0])<<8 | uint32(s[1])
+				g32 := uint32(s[2])<<8 | uint32(s[3])
+				b32 := uint32(s[4])<<8 | uint32(s[5])
+				a32 := uint32(s[6])<<8 | uint32(s[7])
+				d[0] = uint8((r32 * 0xffff / a32) >> 8) // #nosec G115 -- Overflow desired.
+				d[1] = uint8((g32 * 0xffff / a32) >> 8) // #nosec G115 -- Overflow desired.
+				d[2] = uint8((b32 * 0xffff / a32) >> 8) // #nosec G115 -- Overflow desired.
 			}
+			d[3] = a
+			j += 4
+			i += 8
 		}
+	}
+}
 
-	case *image.RGBA:
-		j := 0
-		for y := y1; y < y2; y++ {
-			i := y*img.Stride + x1*4
-			for x := x1; x < x2; x++ {
-				d := dst[j : j+4 : j+4]
-				a := img.Pix[i+3]
-				switch a {
-				case 0:
-					d[0] = 0
-					d[1] = 0
-					d[2] = 0
-					d[3] = a
-				case 0xff:
-					s := img.Pix[i : i+4 : i+4]
-					d[0] = s[0]
-					d[1] = s[1]
-					d[2] = s[2]
-					d[3] = a
-				default:
-					s := img.Pix[i : i+4 : i+4]
-					r16 := uint16(s[0])
-					g16 := uint16(s[1])
-					b16 := uint16(s[2])
-					a16 := uint16(a)
-					d[0] = uint8(r16 * 0xff / a16) // #nosec G115 -- Overflow desired.
-					d[1] = uint8(g16 * 0xff / a16) // #nosec G115 -- Overflow desired.
-					d[2] = uint8(b16 * 0xff / a16) // #nosec G115 -- Overflow desired.
-					d[3] = a
-				}
-				j += 4
-				i += 4
-			}
+func scanGray(img *image.Gray, x1, y1, x2, y2 int, dst []uint8) {
+	if img == nil {
+		panic(gtserror.New("nil check elimination"))
+	}
+	j := 0
+	for y := y1; y < y2; y++ {
+		i := y*img.Stride + x1
+		for x := x1; x < x2; x++ {
+			c := img.Pix[i]
+			d := dst[j : j+4 : j+4]
+			d[0] = c
+			d[1] = c
+			d[2] = c
+			d[3] = 0xff
+			j += 4
+			i++
 		}
+	}
+}
 
-	case *image.RGBA64:
-		j := 0
-		for y := y1; y < y2; y++ {
-			i := y*img.Stride + x1*8
-			for x := x1; x < x2; x++ {
-				s := img.Pix[i : i+8 : i+8]
-				d := dst[j : j+4 : j+4]
-				a := s[6]
-				switch a {
-				case 0:
-					d[0] = 0
-					d[1] = 0
-					d[2] = 0
-				case 0xff:
-					d[0] = s[0]
-					d[1] = s[2]
-					d[2] = s[4]
-				default:
-					r32 := uint32(s[0])<<8 | uint32(s[1])
-					g32 := uint32(s[2])<<8 | uint32(s[3])
-					b32 := uint32(s[4])<<8 | uint32(s[5])
-					a32 := uint32(s[6])<<8 | uint32(s[7])
-					d[0] = uint8((r32 * 0xffff / a32) >> 8) // #nosec G115 -- Overflow desired.
-					d[1] = uint8((g32 * 0xffff / a32) >> 8) // #nosec G115 -- Overflow desired.
-					d[2] = uint8((b32 * 0xffff / a32) >> 8) // #nosec G115 -- Overflow desired.
-				}
-				d[3] = a
-				j += 4
-				i += 8
-			}
+func scanGray16(img *image.Gray16, x1, y1, x2, y2 int, dst []uint8) {
+	if img == nil {
+		panic(gtserror.New("nil check elimination"))
+	}
+	j := 0
+	for y := y1; y < y2; y++ {
+		i := y*img.Stride + x1*2
+		for x := x1; x < x2; x++ {
+			c := img.Pix[i]
+			d := dst[j : j+4 : j+4]
+			d[0] = c
+			d[1] = c
+			d[2] = c
+			d[3] = 0xff
+			j += 4
+			i += 2
 		}
+	}
+}
 
-	case *image.Gray:
-		j := 0
-		for y := y1; y < y2; y++ {
-			i := y*img.Stride + x1
-			for x := x1; x < x2; x++ {
-				c := img.Pix[i]
-				d := dst[j : j+4 : j+4]
-				d[0] = c
-				d[1] = c
-				d[2] = c
-				d[3] = 0xff
-				j += 4
-				i++
-			}
-		}
+func scanYCbCr(img *image.YCbCr, x1, y1, x2, y2 int, dst []uint8) {
+	j := 0
 
-	case *image.Gray16:
-		j := 0
-		for y := y1; y < y2; y++ {
-			i := y*img.Stride + x1*2
-			for x := x1; x < x2; x++ {
-				c := img.Pix[i]
-				d := dst[j : j+4 : j+4]
-				d[0] = c
-				d[1] = c
-				d[2] = c
-				d[3] = 0xff
-				j += 4
-				i += 2
-			}
-		}
+	x1 += img.Rect.Min.X
+	x2 += img.Rect.Min.X
+	y1 += img.Rect.Min.Y
+	y2 += img.Rect.Min.Y
 
-	case *image.YCbCr:
-		j := 0
-		x1 += img.Rect.Min.X
-		x2 += img.Rect.Min.X
-		y1 += img.Rect.Min.Y
-		y2 += img.Rect.Min.Y
+	hy := img.Rect.Min.Y / 2
+	hx := img.Rect.Min.X / 2
 
-		hy := img.Rect.Min.Y / 2
-		hx := img.Rect.Min.X / 2
+	switch img.SubsampleRatio {
+	case image.YCbCrSubsampleRatio420:
 		for y := y1; y < y2; y++ {
 			iy := (y-img.Rect.Min.Y)*img.YStride + (x1 - img.Rect.Min.X)
 
-			var yBase int
-			switch img.SubsampleRatio {
-			case image.YCbCrSubsampleRatio444, image.YCbCrSubsampleRatio422:
-				yBase = (y - img.Rect.Min.Y) * img.CStride
-			case image.YCbCrSubsampleRatio420, image.YCbCrSubsampleRatio440:
-				yBase = (y/2 - hy) * img.CStride
-			}
+			yBase := (y/2 - hy) * img.CStride
 
 			for x := x1; x < x2; x++ {
-				var ic int
-				switch img.SubsampleRatio {
-				case image.YCbCrSubsampleRatio444, image.YCbCrSubsampleRatio440:
-					ic = yBase + (x - img.Rect.Min.X)
-				case image.YCbCrSubsampleRatio422, image.YCbCrSubsampleRatio420:
-					ic = yBase + (x/2 - hx)
-				default:
-					ic = img.COffset(x, y)
-				}
+				ic := yBase + (x/2 - hx)
 
 				yy1 := int32(img.Y[iy]) * 0x10101
 				cb1 := int32(img.Cb[ic]) - 128
@@ -540,78 +550,296 @@ func (s *scanner) scan(x1, y1, x2, y2 int, dst []uint8) {
 			}
 		}
 
-	case *image.Paletted:
-		j := 0
+	case image.YCbCrSubsampleRatio422:
 		for y := y1; y < y2; y++ {
-			i := y*img.Stride + x1
+			iy := (y-img.Rect.Min.Y)*img.YStride + (x1 - img.Rect.Min.X)
+
+			yBase := (y - img.Rect.Min.Y) * img.CStride
+
 			for x := x1; x < x2; x++ {
-				c := s.palette[img.Pix[i]]
+				ic := yBase + (x/2 - hx)
+
+				yy1 := int32(img.Y[iy]) * 0x10101
+				cb1 := int32(img.Cb[ic]) - 128
+				cr1 := int32(img.Cr[ic]) - 128
+
+				r := yy1 + 91881*cr1
+				if uint32(r)&0xff000000 == 0 { //nolint:gosec
+					r >>= 16
+				} else {
+					r = ^(r >> 31)
+				}
+
+				g := yy1 - 22554*cb1 - 46802*cr1
+				if uint32(g)&0xff000000 == 0 { //nolint:gosec
+					g >>= 16
+				} else {
+					g = ^(g >> 31)
+				}
+
+				b := yy1 + 116130*cb1
+				if uint32(b)&0xff000000 == 0 { //nolint:gosec
+					b >>= 16
+				} else {
+					b = ^(b >> 31)
+				}
+
 				d := dst[j : j+4 : j+4]
-				d[0] = c.R
-				d[1] = c.G
-				d[2] = c.B
-				d[3] = c.A
+				d[0] = uint8(r) // #nosec G115 -- Overflow desired.
+				d[1] = uint8(g) // #nosec G115 -- Overflow desired.
+				d[2] = uint8(b) // #nosec G115 -- Overflow desired.
+				d[3] = 0xff
+
+				iy++
 				j += 4
-				i++
+			}
+		}
+
+	case image.YCbCrSubsampleRatio440:
+		for y := y1; y < y2; y++ {
+			iy := (y-img.Rect.Min.Y)*img.YStride + (x1 - img.Rect.Min.X)
+
+			yBase := (y/2 - hy) * img.CStride
+
+			for x := x1; x < x2; x++ {
+				ic := yBase + (x - img.Rect.Min.X)
+
+				yy1 := int32(img.Y[iy]) * 0x10101
+				cb1 := int32(img.Cb[ic]) - 128
+				cr1 := int32(img.Cr[ic]) - 128
+
+				r := yy1 + 91881*cr1
+				if uint32(r)&0xff000000 == 0 { //nolint:gosec
+					r >>= 16
+				} else {
+					r = ^(r >> 31)
+				}
+
+				g := yy1 - 22554*cb1 - 46802*cr1
+				if uint32(g)&0xff000000 == 0 { //nolint:gosec
+					g >>= 16
+				} else {
+					g = ^(g >> 31)
+				}
+
+				b := yy1 + 116130*cb1
+				if uint32(b)&0xff000000 == 0 { //nolint:gosec
+					b >>= 16
+				} else {
+					b = ^(b >> 31)
+				}
+
+				d := dst[j : j+4 : j+4]
+				d[0] = uint8(r) // #nosec G115 -- Overflow desired.
+				d[1] = uint8(g) // #nosec G115 -- Overflow desired.
+				d[2] = uint8(b) // #nosec G115 -- Overflow desired.
+				d[3] = 0xff
+
+				iy++
+				j += 4
+			}
+		}
+
+	case image.YCbCrSubsampleRatio444:
+		for y := y1; y < y2; y++ {
+			iy := (y-img.Rect.Min.Y)*img.YStride + (x1 - img.Rect.Min.X)
+
+			yBase := (y - img.Rect.Min.Y) * img.CStride
+
+			for x := x1; x < x2; x++ {
+				ic := yBase + (x - img.Rect.Min.X)
+
+				yy1 := int32(img.Y[iy]) * 0x10101
+				cb1 := int32(img.Cb[ic]) - 128
+				cr1 := int32(img.Cr[ic]) - 128
+
+				r := yy1 + 91881*cr1
+				if uint32(r)&0xff000000 == 0 { //nolint:gosec
+					r >>= 16
+				} else {
+					r = ^(r >> 31)
+				}
+
+				g := yy1 - 22554*cb1 - 46802*cr1
+				if uint32(g)&0xff000000 == 0 { //nolint:gosec
+					g >>= 16
+				} else {
+					g = ^(g >> 31)
+				}
+
+				b := yy1 + 116130*cb1
+				if uint32(b)&0xff000000 == 0 { //nolint:gosec
+					b >>= 16
+				} else {
+					b = ^(b >> 31)
+				}
+
+				d := dst[j : j+4 : j+4]
+				d[0] = uint8(r) // #nosec G115 -- Overflow desired.
+				d[1] = uint8(g) // #nosec G115 -- Overflow desired.
+				d[2] = uint8(b) // #nosec G115 -- Overflow desired.
+				d[3] = 0xff
+
+				iy++
+				j += 4
 			}
 		}
 
 	default:
-		j := 0
-		b := s.image.Bounds()
-		x1 += b.Min.X
-		x2 += b.Min.X
-		y1 += b.Min.Y
-		y2 += b.Min.Y
 		for y := y1; y < y2; y++ {
+			iy := (y-img.Rect.Min.Y)*img.YStride + (x1 - img.Rect.Min.X)
 			for x := x1; x < x2; x++ {
-				r16, g16, b16, a16 := s.image.At(x, y).RGBA()
-				d := dst[j : j+4 : j+4]
-				switch a16 {
-				case 0xffff:
-					d[0] = uint8(r16 >> 8) // #nosec G115 -- Overflow desired.
-					d[1] = uint8(g16 >> 8) // #nosec G115 -- Overflow desired.
-					d[2] = uint8(b16 >> 8) // #nosec G115 -- Overflow desired.
-					d[3] = 0xff
-				case 0:
-					d[0] = 0
-					d[1] = 0
-					d[2] = 0
-					d[3] = 0
-				default:
-					d[0] = uint8(((r16 * 0xffff) / a16) >> 8) // #nosec G115 -- Overflow desired.
-					d[1] = uint8(((g16 * 0xffff) / a16) >> 8) // #nosec G115 -- Overflow desired.
-					d[2] = uint8(((b16 * 0xffff) / a16) >> 8) // #nosec G115 -- Overflow desired.
-					d[3] = uint8(a16 >> 8)                    // #nosec G115 -- Overflow desired.
+				ic := img.COffset(x, y)
+
+				yy1 := int32(img.Y[iy]) * 0x10101
+				cb1 := int32(img.Cb[ic]) - 128
+				cr1 := int32(img.Cr[ic]) - 128
+
+				r := yy1 + 91881*cr1
+				if uint32(r)&0xff000000 == 0 { //nolint:gosec
+					r >>= 16
+				} else {
+					r = ^(r >> 31)
 				}
+
+				g := yy1 - 22554*cb1 - 46802*cr1
+				if uint32(g)&0xff000000 == 0 { //nolint:gosec
+					g >>= 16
+				} else {
+					g = ^(g >> 31)
+				}
+
+				b := yy1 + 116130*cb1
+				if uint32(b)&0xff000000 == 0 { //nolint:gosec
+					b >>= 16
+				} else {
+					b = ^(b >> 31)
+				}
+
+				d := dst[j : j+4 : j+4]
+				d[0] = uint8(r) // #nosec G115 -- Overflow desired.
+				d[1] = uint8(g) // #nosec G115 -- Overflow desired.
+				d[2] = uint8(b) // #nosec G115 -- Overflow desired.
+				d[3] = 0xff
+
+				iy++
 				j += 4
 			}
+		}
+	}
+}
+
+func scanPaletted(img *image.Paletted, x1, y1, x2, y2 int, dst []uint8) {
+	var palette [256]color.NRGBA
+	if len(palette) < len(img.Palette) {
+		panic(gtserror.New("bound check elimination"))
+	}
+	for i := 0; i < len(img.Palette); i++ {
+		palette[i] = colorToNRGBA(img.Palette[i])
+	}
+	j := 0
+	for y := y1; y < y2; y++ {
+		i := y*img.Stride + x1
+		for x := x1; x < x2; x++ {
+			c := palette[img.Pix[i]]
+			d := dst[j : j+4 : j+4]
+			d[0] = c.R
+			d[1] = c.G
+			d[2] = c.B
+			d[3] = c.A
+			j += 4
+			i++
+		}
+	}
+}
+
+// inlined from: image/color.NRGBAModel.Convert()
+func colorToNRGBA(c color.Color) color.NRGBA {
+	if c, ok := c.(color.NRGBA); ok {
+		return c
+	}
+	r, g, b, a := c.RGBA()
+	if a == 0xffff {
+		return color.NRGBA{
+			uint8(r >> 8), // #nosec G115 -- from stdlib
+			uint8(g >> 8), // #nosec G115 -- from stdlib
+			uint8(b >> 8), // #nosec G115 -- from stdlib
+			0xff,
+		}
+	}
+	if a == 0 {
+		return color.NRGBA{
+			0,
+			0,
+			0,
+			0,
+		}
+	}
+	// Since Color.RGBA returns an alpha-premultiplied color,
+	// we should have r <= a && g <= a && b <= a.
+	r = (r * 0xffff) / a
+	g = (g * 0xffff) / a
+	b = (b * 0xffff) / a
+	return color.NRGBA{
+		uint8(r >> 8), // #nosec G115 -- from stdlib
+		uint8(g >> 8), // #nosec G115 -- from stdlib
+		uint8(b >> 8), // #nosec G115 -- from stdlib
+		uint8(a >> 8), // #nosec G115 -- from stdlib
+	}
+}
+
+func scanAny(img image.Image, x1, y1, x2, y2 int, dst []uint8) {
+	j := 0
+	b := img.Bounds()
+	x1 += b.Min.X
+	x2 += b.Min.X
+	y1 += b.Min.Y
+	y2 += b.Min.Y
+	for y := y1; y < y2; y++ {
+		for x := x1; x < x2; x++ {
+			r16, g16, b16, a16 := img.At(x, y).RGBA()
+			d := dst[j : j+4 : j+4]
+			switch a16 {
+			case 0xffff:
+				d[0] = uint8(r16 >> 8) // #nosec G115 -- Overflow desired.
+				d[1] = uint8(g16 >> 8) // #nosec G115 -- Overflow desired.
+				d[2] = uint8(b16 >> 8) // #nosec G115 -- Overflow desired.
+				d[3] = 0xff
+			case 0:
+				d[0] = 0
+				d[1] = 0
+				d[2] = 0
+				d[3] = 0
+			default:
+				d[0] = uint8(((r16 * 0xffff) / a16) >> 8) // #nosec G115 -- Overflow desired.
+				d[1] = uint8(((g16 * 0xffff) / a16) >> 8) // #nosec G115 -- Overflow desired.
+				d[2] = uint8(((b16 * 0xffff) / a16) >> 8) // #nosec G115 -- Overflow desired.
+				d[3] = uint8(a16 >> 8)                    // #nosec G115 -- Overflow desired.
+			}
+			j += 4
 		}
 	}
 }
 
 // reverse reverses the data
 // in contained pixel slice.
-func reverse(pix []uint8) {
-	if len(pix) <= 4 {
+func reverse(pix8 []uint8) {
+	if len(pix8) <= 4 || len(pix8)%4 != 0 {
 		return
 	}
-	i := 0
-	j := len(pix) - 4
-	for i < j {
-		pi := pix[i : i+4 : i+4]
-		pj := pix[j : j+4 : j+4]
-		pi[0], pj[0] = pj[0], pi[0]
-		pi[1], pj[1] = pj[1], pi[1]
-		pi[2], pj[2] = pj[2], pi[2]
-		pi[3], pj[3] = pj[3], pi[3]
-		i += 4
-		j -= 4
+	for i, j := 0, len(pix8)-4; i < j; i, j = i+4, j-4 {
+		di := pix8[i : i+4 : i+4]
+		dj := pix8[j : j+4 : j+4]
+		di[0], dj[0] = dj[0], di[0]
+		di[1], dj[1] = dj[1], di[1]
+		di[2], dj[2] = dj[2], di[2]
+		di[3], dj[3] = dj[3], di[3]
 	}
 }
 
-// clampFloat rounds and clamps float64 value to fit into uint8.
-func clampFloat(x float64) uint8 {
+// clampFloatTo8 rounds and clamps
+// float64 value to fit into uint8.
+func clampFloatTo8(x float64) uint8 {
 	v := int64(x + 0.5)
 	if v > 255 {
 		return 255
