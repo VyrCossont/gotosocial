@@ -34,6 +34,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/middleware"
 	"code.superseriousbusiness.org/gotosocial/internal/oidc"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/storage"
 	"code.superseriousbusiness.org/gotosocial/testrig"
@@ -96,6 +97,7 @@ func (suite *AuthStandardTestSuite) SetupTest() {
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
+		searchembedding.NewNoopEmbedder(),
 	)
 	suite.authModule = auth.New(&suite.state, suite.processor, suite.idp)
 

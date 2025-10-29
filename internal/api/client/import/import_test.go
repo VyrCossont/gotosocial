@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"github.com/stretchr/testify/suite"
 
 	importdata "code.superseriousbusiness.org/gotosocial/internal/api/client/import"
@@ -84,6 +85,7 @@ func (suite *ImportTestSuite) SetupTest() {
 		testrig.NewEmailSender("../../../../web/template/", nil),
 		testrig.NewNoopWebPushSender(),
 		mediaManager,
+		searchembedding.NewNoopEmbedder(),
 	)
 	testrig.StartWorkers(&suite.state, processor.Workers())
 

@@ -46,6 +46,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/processing/push"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/report"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/search"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/status"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/stream"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/tags"
@@ -210,6 +211,7 @@ func NewProcessor(
 	muteFilter *mutes.Filter,
 	intFilter *interaction.Filter,
 	statusFilter *statusfilter.Filter,
+	embedder searchembedding.Embedder,
 ) *Processor {
 	parseMentionFunc := GetParseMentionFunc(state, federator)
 	processor := &Processor{
@@ -247,12 +249,12 @@ func NewProcessor(
 	processor.report = report.New(state, converter)
 	processor.tags = tags.New(state, converter)
 	processor.timeline = timeline.New(state, converter, visFilter, muteFilter, statusFilter)
-	processor.search = search.New(state, federator, converter, visFilter)
+	processor.search = search.New(state, federator, converter, visFilter, embedder)
 	processor.status = status.New(state, &common, &processor.polls, &processor.interactionRequests, federator, converter, visFilter, intFilter, parseMentionFunc)
 	processor.user = user.New(state, converter, oauthServer, emailSender)
 
 	// The advanced migrations processor sequences advanced migrations from all other processors.
-	processor.advancedmigrations = advancedmigrations.New(&processor.conversations)
+	processor.advancedmigrations = advancedmigrations.New(&processor.conversations, &processor.search)
 
 	// Workers processor handles asynchronous
 	// worker jobs; instantiate it separately
@@ -271,6 +273,7 @@ func NewProcessor(
 		&processor.media,
 		&processor.stream,
 		&processor.conversations,
+		&processor.search,
 	)
 
 	return processor

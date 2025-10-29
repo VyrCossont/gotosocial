@@ -27,6 +27,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/media"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/subscriptions"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
@@ -42,6 +43,7 @@ func NewTestProcessor(
 	emailSender email.Sender,
 	webPushSender webpush.Sender,
 	mediaManager *media.Manager,
+	embedder searchembedding.Embedder,
 ) *processing.Processor {
 	return processing.NewProcessor(
 		cleaner.New(state),
@@ -61,5 +63,6 @@ func NewTestProcessor(
 		mutes.NewFilter(state),
 		interaction.NewFilter(state),
 		status.NewFilter(state),
+		embedder,
 	)
 }

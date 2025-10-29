@@ -23,21 +23,22 @@ import (
 	"net/url"
 	"time"
 
+	"codeberg.org/gruf/go-kv/v2"
+
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/federation/dereferencing"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
-	"code.superseriousbusiness.org/gotosocial/internal/id"
-	"code.superseriousbusiness.org/gotosocial/internal/uris"
-	"codeberg.org/gruf/go-kv/v2"
-
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/common"
+	"code.superseriousbusiness.org/gotosocial/internal/processing/search"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
+	"code.superseriousbusiness.org/gotosocial/internal/uris"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
@@ -50,6 +51,7 @@ type fediAPI struct {
 	federate *federate
 	account  *account.Processor
 	common   *common.Processor
+	search   *search.Processor
 	utils    *utils
 }
 
@@ -378,6 +380,11 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		// prepared version from all timelines. The status dereferencer
 		// functions will ensure necessary ancestors exist before this point.
 		p.surface.invalidateStatusFromTimelines(status.InReplyToID)
+	}
+
+	// Index the status for search.
+	if err := p.search.Index(ctx, status); err != nil {
+		log.Errorf(ctx, "error indexing status: %v", err)
 	}
 
 	return nil
@@ -1342,6 +1349,11 @@ func (p *fediAPI) UpdateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 	// Status representation changed, uncache from timelines.
 	p.surface.invalidateStatusFromTimelines(status.ID)
 
+	// Index the status for search.
+	if err := p.search.Index(ctx, status); err != nil {
+		log.Errorf(ctx, "error indexing status: %v", err)
+	}
+
 	return nil
 }
 
@@ -1395,6 +1407,11 @@ func (p *fediAPI) DeleteStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		// Interaction counts changed on the replied status;
 		// uncache the prepared version from all timelines.
 		p.surface.invalidateStatusFromTimelines(status.InReplyToID)
+	}
+
+	// Deindex the status for search.
+	if err := p.search.Deindex(ctx, status.ID); err != nil {
+		log.Errorf(ctx, "error deindexing status: %v", err)
 	}
 
 	return nil

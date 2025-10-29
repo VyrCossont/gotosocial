@@ -38,6 +38,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/subscriptions"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
@@ -103,6 +104,7 @@ func (suite *WebfingerGetTestSuite) funkifyAccountDomain(host string, accountDom
 		mutes.NewFilter(&suite.state),
 		interaction.NewFilter(&suite.state),
 		status.NewFilter(&suite.state),
+		searchembedding.NewNoopEmbedder(),
 	)
 
 	suite.webfingerModule = webfinger.New(suite.processor)

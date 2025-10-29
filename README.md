@@ -40,6 +40,10 @@ Here's a screenshot of the instance landing page! Check out the project's [offic
   - [Various federation modes](#various-federation-modes)
   - [OIDC integration](#oidc-integration)
   - [Backend-first design](#backend-first-design)
+  - [Semantic search](#semantic-search)
+    - [Setup](#setup)
+    - [Usage](#usage)
+    - [Reverting to vanilla GTS](#reverting-to-vanilla-gts)
 - [Alternatives to GoToSocial](#alternatives-to-gotosocial)
 - [Known Issues](#known-issues)
 - [Installing GoToSocial](#installing-gotosocial)
@@ -275,6 +279,85 @@ Unlike other federated server projects, GoToSocial doesn't include an integrated
 Instead, like Matrix.org's [Synapse](https://github.com/matrix-org/synapse) project, it provides a relatively generic backend server implementation, some beautiful static pages for profiles and posts, and a [well-documented API](https://docs.gotosocial.org/en/latest/api/swagger/).
 
 On top of this API, web developers are encouraged to build any front-end implementation or mobile application that they wish, whether Tumblr-like, Facebook-like, Twitter-like, or something else entirely.
+
+### Semantic search
+
+This feature branch, brought to you _as an experiment_ by Vyr, supports searching for posts by meaning using [text embeddings](https://en.wikipedia.org/wiki/Sentence_embedding).
+
+#### Setup
+
+You'll need something that can run a machine learning model capable of generating embeddings from posts or queries, hosting an OpenAI-compatible API. (The OpenAI API is used only because it's a semi-standard. Don't actually send anyone's posts to OpenAI.) [Ollama](https://ollama.com) is one way to self-host, and [Google's EmbeddingGemma](https://developers.googleblog.com/en/introducing-embeddinggemma/) is a model that produces good-enough embeddings. (These are also the only model server and model Vyr has tested with so far.) On macOS, you can set up Ollama and EmbeddingGemma thru [Homebrew](https://brew.sh):
+
+```bash
+brew install ollama-app
+ollama pull embeddinggemma:300m
+```
+
+You'll also need to use PostgreSQL with the [`pgvector`](https://github.com/pgvector/pgvector) extension. (Text embedding search isn't supported on SQLite yet.) On macOS, you can set those up with Homebrew as well:
+
+```bash
+brew install postgresql@18
+brew install pgvector
+```
+
+After installing this feature branch, but before restarting GTS, add the following variables to your GTS `config.yaml` to turn on text embedding search and select the model and model server:
+
+```yaml
+search-embedding-backend: "api"
+search-embedding-api-base-url: "http://localhost:11434/v1"
+search-embedding-model: "embeddinggemma:300m"
+search-embedding-vector-size: 768
+search-embedding-distance-metric: "l2"
+search-embedding-prompt-document: "title: none | text: "
+search-embedding-prompt-query: "task: search result | query: "
+search-embedding-max-chars: 1000
+```
+
+Now restart GTS. The `20251028213127_pg_add_status_embeddings` DB migration will try to register the `pgvector` extension, and create and index the `status_embeddings` table. If it fails to do the first bit, you will need to log into your GTS database _as a superuser_ and run the following to register the extension and then reset the migration state:
+
+```postgresql
+create extension if not exists vector;
+delete from bun_migrations where name = '20251028213127';
+```
+
+After that, the `20251028213127_pg_add_status_embeddings` _advanced_ migration (same name) will run to create embeddings for all existing posts in your database. This may take **hours to days** if your database is very large or your model server or DB server are slow. Advanced migrations cannot be skipped by restarting GTS; they continue from their last known state when GTS is restarted. If you want to bypass it and only index _new_ posts as they come in, log into your GTS database and tell it that the advanced migration has already finished:
+
+```postgresql
+update advanced_migrations set finished = true where id = '20251028213127_pg_add_status_embeddings';
+```
+
+If you change your mind later and want to index the remainder of your posts, repeat the process with `finished = false` and restart GTS again, which will resume the advanced migration.
+
+#### Usage
+
+When searching for posts, prepend `!fuzzy ` to your query to turn on text embedding search: `!fuzzy pictures of rats`.
+
+Note that paging through results won't work properly because limit/offset paging is not implemented for text embedding search; the first page will have useful results, but subsequent pages will repeat the same query and probably return most of the same results.
+
+As an admin, you can also run queries from the command line. Each argument to the `gotosocial debug query` command will be printed along with a page of results.
+
+```bash
+gotosocial \
+  --config-path path/to/your/config.yaml \
+  debug query \
+  "pictures of rats" \
+  "illegal drugs on the dark web" \
+  "beautiful transgender women"
+```
+
+#### Reverting to vanilla GTS
+
+1. Stop GTS
+2. Switch back to a vanilla branch for GTS v0.20.1 or newer 
+3. Remove vars starting with `search-embedding-` from your `config.yaml`
+4. Run the SQL below to drop the embeddings and migrations from your DB
+5. Recompile and restart GTS
+
+```postgresql
+drop table status_embeddings;
+delete from bun_migrations where name = '20251028213127';
+delete from advanced_migrations where id = '20251028213127_pg_add_status_embeddings';
+```
 
 ---
 

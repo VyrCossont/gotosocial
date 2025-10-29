@@ -69,6 +69,7 @@ type DBService struct {
 	db.Status
 	db.StatusBookmark
 	db.StatusEdit
+	db.StatusEmbedding
 	db.StatusFave
 	db.Tag
 	db.Thread
@@ -272,6 +273,10 @@ func NewBunDBService(ctx context.Context, state *state.State) (db.DB, error) {
 			state: state,
 		},
 		StatusEdit: &statusEditDB{
+			db:    db,
+			state: state,
+		},
+		StatusEmbedding: &statusEmbeddingDB{
 			db:    db,
 			state: state,
 		},

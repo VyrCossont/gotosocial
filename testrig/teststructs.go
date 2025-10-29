@@ -53,6 +53,7 @@ type TestStructs struct {
 	TransportController transport.Controller
 	InteractionFilter   *interaction.Filter
 	StatusFilter        *status.Filter
+	Embedder            *MockEmbedder
 }
 
 func SetupTestStructs(
@@ -85,6 +86,7 @@ func SetupTestStructs(
 	oauthServer := NewTestOauthServer(&state)
 	emailSender := NewEmailSender(rTemplatePath, nil)
 	webPushSender := NewWebPushMockSender()
+	embedder := &MockEmbedder{}
 
 	common := common.New(
 		&state,
@@ -110,6 +112,7 @@ func SetupTestStructs(
 		muteFilter,
 		intFilter,
 		statusFilter,
+		embedder,
 	)
 
 	StartWorkers(&state, processor.Workers())
@@ -128,6 +131,7 @@ func SetupTestStructs(
 		TransportController: transportController,
 		InteractionFilter:   intFilter,
 		StatusFilter:        statusFilter,
+		Embedder:            embedder,
 	}
 }
 

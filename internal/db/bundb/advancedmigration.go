@@ -18,8 +18,11 @@
 package bundb
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 
+	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"github.com/uptrace/bun"
@@ -39,6 +42,15 @@ func (a *advancedMigrationDB) GetAdvancedMigration(ctx context.Context, id strin
 		Scan(ctx)
 	if err != nil {
 		return nil, err
+	}
+	// TODO: (Vyr) seems to affect all advanced migrations with a PG database. What's going on here?
+	// 	See: <https://www.postgresql.org/docs/current/datatype-binary.html#DATATYPE-BINARY-BYTEA-HEX-FORMAT>
+	if base16Bytes, isPGByteA := bytes.CutPrefix(advancedMigration.StateJSON, []byte{'\\', 'x'}); isPGByteA {
+		advancedMigration.StateJSON = make([]byte, hex.DecodedLen(len(base16Bytes)))
+		_, err := hex.Decode(advancedMigration.StateJSON, base16Bytes)
+		if err != nil {
+			return nil, gtserror.New("detected PG bytea format for StateJSON but couldn't decode it")
+		}
 	}
 	return &advancedMigration, nil
 }

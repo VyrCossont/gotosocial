@@ -27,6 +27,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/processing/common"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/conversations"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/media"
+	"code.superseriousbusiness.org/gotosocial/internal/processing/search"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/stream"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
@@ -54,6 +55,7 @@ func New(
 	media *media.Processor,
 	stream *stream.Processor,
 	conversations *conversations.Processor,
+	search *search.Processor,
 ) Processor {
 	// Init federate logic
 	// wrapper struct.
@@ -95,6 +97,7 @@ func New(
 			federate:  federate,
 			account:   account,
 			common:    common,
+			search:    search,
 			utils:     utils,
 		},
 		fediAPI: fediAPI{
@@ -103,6 +106,7 @@ func New(
 			federate: federate,
 			account:  account,
 			common:   common,
+			search:   search,
 			utils:    utils,
 		},
 	}

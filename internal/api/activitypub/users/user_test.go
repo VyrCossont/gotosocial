@@ -27,6 +27,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/media"
 	"code.superseriousbusiness.org/gotosocial/internal/middleware"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/storage"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
@@ -97,6 +98,7 @@ func (suite *UserStandardTestSuite) SetupTest() {
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
+		searchembedding.NewNoopEmbedder(),
 	)
 	testrig.StartWorkers(&suite.state, suite.processor.Workers())
 

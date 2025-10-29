@@ -57,6 +57,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/observability"
 	"code.superseriousbusiness.org/gotosocial/internal/oidc"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/router"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	gtsstorage "code.superseriousbusiness.org/gotosocial/internal/storage"
@@ -315,6 +316,12 @@ func Start(ctx context.Context) error {
 	// Create a Web Push notification sender.
 	webPushSender := webpush.NewSender(client, state, typeConverter)
 
+	// Create a search embedder (may be no-op depending on config).
+	embedder, err := searchembedding.FromConfig()
+	if err != nil {
+		return gtserror.Newf("error creating search embedder: %w", err)
+	}
+
 	// Start the job scheduler
 	// (this is required for cleaner).
 	state.Workers.StartScheduler()
@@ -359,6 +366,7 @@ func Start(ctx context.Context) error {
 		muteFilter,
 		intFilter,
 		statusFilter,
+		embedder,
 	)
 
 	// Schedule background cleaning tasks.

@@ -880,6 +880,76 @@ scheduled-statuses-max-total: 300
 # Default: 25
 scheduled-statuses-max-daily: 25
 
+#########################
+##### SEARCH CONFIG #####
+#########################
+
+# Configuration for full-text and/or embedding-vector-based search.
+
+# String. Text embedding implementation to use.
+# "api" uses an out-of-process model server.
+# "internal" is not yet implemented, but would use an in-process model.
+# To disable embedding-based search entirely, leave this empty.
+# Options: ["","api","internal"]
+# Default: ""
+search-embedding-backend: ""
+
+# String. Base URL for OpenAI-compatible API used for generating text embeddings
+# when search-embedding-backend is "api". Ignored otherwise.
+# Examples: ["http://localhost:11434/v1"]
+# Default: ""
+search-embedding-api-base-url: ""
+
+# String. API key for OpenAI-compatible API used for generating text embeddings
+# when search-embedding-backend is "api". Ignored otherwise.
+# If you're self-hosting Ollama etc. you don't need this and can leave it empty.
+# Examples: ["sk-xxxxxxx"]
+# Default: ""
+search-embedding-api-key: ""
+
+# String. Name of text embedding model to use for text searches.
+# If you're self-hosting Ollama etc. make sure you've actually downloaded the model.
+# Examples: ["embeddinggemma:300m"]
+# Default: ""
+search-embedding-model: ""
+
+# Int. Length of text embedding vectors.
+# Consult the documentation for whatever text embedding model you're using,
+# and note that some models may support multiple output vector sizes.
+# Examples: [768]
+# Default: 0
+search-embedding-vector-size: 0
+
+# String. Text embedding distance metric to use.
+# Consult the documentation for whatever text embedding model you're using:
+# if the output vectors are normalized, you can use "cosine",
+# but if not, you might want "l2"" instead.
+# Options: ["cosine","l1","l2"]
+# Default: ""
+search-embedding-distance-metric: ""
+
+# String. Prefix for input when generating an embedding for a document (a status or profile).
+# Consult the documentation for whatever text embedding model you're using
+# to determine whether you need this.
+# Examples: ["title: none | text: "]
+# Default: ""
+search-embedding-prompt-document: ""
+
+# String. Prefix for input when generating an embedding for a search query.
+# Consult the documentation for whatever text embedding model you're using
+# to determine whether you need this.
+# Examples: ["task: search result | query: "]
+# Default: ""
+search-embedding-prompt-query: ""
+
+# Int. Max length of input to text embedding model, in characters,
+# or zero for unlimited length.
+# Consult the documentation for whatever text embedding model you're using.
+# Applied to both documents and search queries.
+# Examples: [1000]
+# Default: 0
+search-embedding-max-chars: 0
+
 ##############################
 ##### LETSENCRYPT CONFIG #####
 ##############################

@@ -933,6 +933,38 @@ func (s *statusDB) GetDirectStatusIDsBatch(ctx context.Context, minID string, ma
 	return statusIDs, nil
 }
 
+// TODO: (Vyr) these are essentially the same as the Direct variants. Merge them?
+
+func (s *statusDB) MaxAnyStatusID(ctx context.Context) (string, error) {
+	maxID := ""
+	if err := s.db.
+		NewSelect().
+		Model((*gtsmodel.Status)(nil)).
+		ColumnExpr("COALESCE(MAX(?), '')", bun.Ident("id")).
+		Scan(ctx, &maxID); // nocollapse
+	err != nil {
+		return "", err
+	}
+	return maxID, nil
+}
+
+func (s *statusDB) GetAnyStatusIDsBatch(ctx context.Context, minID string, maxIDInclusive string, count int) ([]string, error) {
+	var statusIDs []string
+	if err := s.db.
+		NewSelect().
+		Model((*gtsmodel.Status)(nil)).
+		Column("id").
+		Where("? > ?", bun.Ident("id"), minID).
+		Where("? <= ?", bun.Ident("id"), maxIDInclusive).
+		Order("id ASC").
+		Limit(count).
+		Scan(ctx, &statusIDs); // nocollapse
+	err != nil {
+		return nil, err
+	}
+	return statusIDs, nil
+}
+
 func (s *statusDB) GetStatusInteractions(
 	ctx context.Context,
 	statusID string,

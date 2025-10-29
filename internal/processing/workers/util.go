@@ -182,6 +182,11 @@ func (u *utils) wipeStatus(
 		errs.Appendf("error deleting status from conversations: %w", err)
 	}
 
+	// Delete text embedding for this status.
+	if _, err := u.state.DB.DeleteStatusEmbeddings(ctx, []string{status.ID}); err != nil {
+		errs.Appendf("error deleting text embedding for status: %w", err)
+	}
+
 	// Finally delete the status itself.
 	if err := u.state.DB.DeleteStatusByID(ctx, status.ID); err != nil {
 		errs.Appendf("error deleting status: %w", err)

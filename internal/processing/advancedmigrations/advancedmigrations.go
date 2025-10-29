@@ -22,18 +22,22 @@ import (
 	"fmt"
 
 	"code.superseriousbusiness.org/gotosocial/internal/processing/conversations"
+	"code.superseriousbusiness.org/gotosocial/internal/processing/search"
 )
 
 // Processor holds references to any other processor that has migrations to run.
 type Processor struct {
 	conversations *conversations.Processor
+	search        *search.Processor
 }
 
 func New(
 	conversations *conversations.Processor,
+	search *search.Processor,
 ) Processor {
 	return Processor{
 		conversations: conversations,
+		search:        search,
 	}
 }
 
@@ -42,6 +46,10 @@ func New(
 func (p *Processor) Migrate(ctx context.Context) error {
 	if err := p.conversations.MigrateDMsToConversations(ctx); err != nil {
 		return fmt.Errorf("error running conversations advanced migration: %w", err)
+	}
+
+	if err := p.search.CreateEmbeddingsForStatuses(ctx); err != nil {
+		return fmt.Errorf("error running search advanced migration: %w", err)
 	}
 
 	return nil

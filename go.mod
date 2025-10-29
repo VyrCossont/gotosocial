@@ -55,6 +55,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ncruces/go-sqlite3 v0.29.1
 	github.com/oklog/ulid v1.3.1
+	github.com/openai/openai-go/v3 v3.7.0
 	github.com/pquerna/otp v1.5.0
 	github.com/rivo/uniseg v0.4.7
 	github.com/spf13/cast v1.10.0
@@ -202,6 +203,10 @@ require (
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tdewolff/parse/v2 v2.8.4 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.2.0 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/toqueteos/webbrowser v1.2.0 // indirect

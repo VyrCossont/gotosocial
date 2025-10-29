@@ -20,6 +20,7 @@ package search
 import (
 	"code.superseriousbusiness.org/gotosocial/internal/federation"
 	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
@@ -29,14 +30,16 @@ type Processor struct {
 	federator *federation.Federator
 	converter *typeutils.Converter
 	visFilter *visibility.Filter
+	embedder  searchembedding.Embedder
 }
 
 // New returns a new status processor.
-func New(state *state.State, federator *federation.Federator, converter *typeutils.Converter, visFilter *visibility.Filter) Processor {
+func New(state *state.State, federator *federation.Federator, converter *typeutils.Converter, visFilter *visibility.Filter, embedder searchembedding.Embedder) Processor {
 	return Processor{
 		state:     state,
 		federator: federator,
 		converter: converter,
 		visFilter: visFilter,
+		embedder:  embedder,
 	}
 }

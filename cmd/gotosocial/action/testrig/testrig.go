@@ -40,6 +40,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/middleware"
 	"code.superseriousbusiness.org/gotosocial/internal/observability"
 	"code.superseriousbusiness.org/gotosocial/internal/oidc"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/router"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/storage"
@@ -160,12 +161,13 @@ func Start(ctx context.Context) error {
 	transportController := testrig.NewTestTransportController(state, httpClient)
 	mediaManager := testrig.NewTestMediaManager(state)
 	federator := testrig.NewTestFederator(state, transportController, mediaManager)
+	embedder := searchembedding.NewNoopEmbedder()
 
 	emailSender := testrig.NewEmailSender("./web/template/", nil)
 	webPushSender := testrig.NewWebPushMockSender()
 	typeConverter := typeutils.NewConverter(state)
 
-	processor := testrig.NewTestProcessor(state, federator, emailSender, webPushSender, mediaManager)
+	processor := testrig.NewTestProcessor(state, federator, emailSender, webPushSender, mediaManager, embedder)
 
 	// Initialize workers.
 	testrig.StartWorkers(state, processor.Workers())

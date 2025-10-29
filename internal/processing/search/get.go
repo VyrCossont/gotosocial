@@ -854,16 +854,27 @@ func (p *Processor) statusesByText(
 		fromAccountID = parsed.fromAccountID
 	}
 
-	statuses, err := p.state.DB.SearchForStatuses(
-		ctx,
-		requestingAccountID,
-		query,
-		fromAccountID,
-		maxID,
-		minID,
-		limit,
-		offset,
-	)
+	var statuses []*gtsmodel.Status
+	if query, useEmbeddingSearch := strings.CutPrefix(query, "!fuzzy "); useEmbeddingSearch {
+		// TODO: (Vyr) it would be better to fuse full-text search with vector search, maybe with a re-ranking model
+		var queryEmbedding *gtsmodel.QueryEmbedding
+		queryEmbedding, err = p.embedder.CreateQueryEmbedding(ctx, query)
+		if err != nil {
+			return gtserror.Newf("error creating query embedding: %w", err)
+		}
+		statuses, err = p.state.DB.StatusEmbeddingBestMatches(ctx, queryEmbedding, limit)
+	} else {
+		statuses, err = p.state.DB.SearchForStatuses(
+			ctx,
+			requestingAccountID,
+			query,
+			fromAccountID,
+			maxID,
+			minID,
+			limit,
+			offset,
+		)
+	}
 	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		return gtserror.Newf("error checking database for statuses using text %s: %w", query, err)
 	}

@@ -29,6 +29,7 @@ import (
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/oauth"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/gin-gonic/gin"
@@ -87,6 +88,7 @@ func (suite *ExportsTestSuite) SetupTest() {
 		testrig.NewEmailSender("../../../../web/template/", nil),
 		testrig.NewNoopWebPushSender(),
 		mediaManager,
+		searchembedding.NewNoopEmbedder(),
 	)
 
 	suite.exportsModule = exports.New(processor)

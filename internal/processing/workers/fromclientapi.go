@@ -32,6 +32,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/common"
+	"code.superseriousbusiness.org/gotosocial/internal/processing/search"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
@@ -49,6 +50,7 @@ type clientAPI struct {
 	federate  *federate
 	account   *account.Processor
 	common    *common.Processor
+	search    *search.Processor
 	utils     *utils
 }
 
@@ -370,6 +372,11 @@ func (p *clientAPI) CreateStatus(ctx context.Context, cMsg *messages.FromClientA
 		// Interaction counts changed on the replied status;
 		// uncache the prepared version from all timelines.
 		p.surface.invalidateStatusFromTimelines(status.InReplyToID)
+	}
+
+	// Index the status for search.
+	if err := p.search.Index(ctx, status); err != nil {
+		log.Errorf(ctx, "error indexing status: %v", err)
 	}
 
 	return nil
@@ -765,6 +772,11 @@ func (p *clientAPI) UpdateStatus(ctx context.Context, cMsg *messages.FromClientA
 	// Status representation has changed, invalidate from timelines.
 	p.surface.invalidateStatusFromTimelines(status.ID)
 
+	// Index the status for search.
+	if err := p.search.Index(ctx, status); err != nil {
+		log.Errorf(ctx, "error indexing status: %v", err)
+	}
+
 	return nil
 }
 
@@ -988,6 +1000,11 @@ func (p *clientAPI) DeleteStatus(ctx context.Context, cMsg *messages.FromClientA
 		// Interaction counts changed on the replied status;
 		// uncache the prepared version from all timelines.
 		p.surface.invalidateStatusFromTimelines(status.InReplyToID)
+	}
+
+	// Deindex the status for search.
+	if err := p.search.Deindex(ctx, status.ID); err != nil {
+		log.Errorf(ctx, "error deindexing status: %v", err)
 	}
 
 	return nil

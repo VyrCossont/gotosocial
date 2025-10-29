@@ -605,6 +605,11 @@ func (suite *FromFediAPITestSuite) TestCreateStatusFromIRI() {
 	s, err := testStructs.State.DB.GetStatusByURI(suite.T().Context(), "http://example.org/users/Some_User/statuses/afaba698-5740-4e32-a702-af61aa543bc1")
 	suite.NoError(err)
 	suite.Equal(statusCreator.URI, s.AccountURI)
+
+	// Check whether the embedder was called to index the status.
+	if suite.Len(testStructs.Embedder.Statuses, 1) {
+		suite.Equal(s.ID, testStructs.Embedder.Statuses[0].ID)
+	}
 }
 
 func (suite *FromFediAPITestSuite) TestMoveAccount() {
@@ -781,6 +786,11 @@ func (suite *FromFediAPITestSuite) TestUpdateNote() {
 		return err == nil
 	}) {
 		suite.FailNow("timed out waiting for mention notif")
+	}
+
+	// Check whether the embedder was called to index the updated status.
+	if suite.Len(testStructs.Embedder.Statuses, 1) {
+		suite.Equal(status.ID, testStructs.Embedder.Statuses[0].ID)
 	}
 }
 

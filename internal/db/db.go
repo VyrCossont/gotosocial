@@ -53,6 +53,7 @@ type DB interface {
 	Status
 	StatusBookmark
 	StatusEdit
+	StatusEmbedding
 	StatusFave
 	Tag
 	Thread

@@ -95,6 +95,18 @@ type Status interface {
 	// It is used only by the conversation advanced migration.
 	GetDirectStatusIDsBatch(ctx context.Context, minID string, maxIDInclusive string, count int) ([]string, error)
 
+	// MaxAnyStatusID returns the newest ID across all statuses.
+	// Returns the empty string with no error if there are no statuses yet.
+	// It is used only by the search advanced migration.
+	MaxAnyStatusID(ctx context.Context) (string, error)
+
+	// GetAnyStatusIDsBatch returns up to count status IDs strictly greater than minID
+	// and less than or equal to maxIDInclusive. Note that this is different from most of our paging,
+	// which uses a maxID and returns IDs strictly less than that, because it's called with the result of
+	// MaxAnyStatusID, and expects to eventually return the status with that ID.
+	// It is used only by the search advanced migration.
+	GetAnyStatusIDsBatch(ctx context.Context, minID string, maxIDInclusive string, count int) ([]string, error)
+
 	// GetStatusInteractions gets all abstract "interactions" of a status (likes, replies, boosts).
 	// If localOnly is true, will return only interactions performed by accounts on this instance.
 	// Aside from that, interactions are not filtered or deduplicated, it's up to the caller to do that.

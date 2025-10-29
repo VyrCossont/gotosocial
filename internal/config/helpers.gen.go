@@ -128,6 +128,15 @@ const (
 	SyslogEnabledFlag                              = "syslog-enabled"
 	SyslogProtocolFlag                             = "syslog-protocol"
 	SyslogAddressFlag                              = "syslog-address"
+	SearchEmbeddingBackendFlag                     = "search-embedding-backend"
+	SearchEmbeddingAPIBaseURLFlag                  = "search-embedding-api-base-url"
+	SearchEmbeddingAPIKeyFlag                      = "search-embedding-api-key"
+	SearchEmbeddingModelFlag                       = "search-embedding-model"
+	SearchEmbeddingVectorSizeFlag                  = "search-embedding-vector-size"
+	SearchEmbeddingDistanceMetricFlag              = "search-embedding-distance-metric"
+	SearchEmbeddingPromptDocumentFlag              = "search-embedding-prompt-document"
+	SearchEmbeddingPromptQueryFlag                 = "search-embedding-prompt-query"
+	SearchEmbeddingMaxCharsFlag                    = "search-embedding-max-chars"
 	AdvancedCookiesSamesiteFlag                    = "advanced-cookies-samesite"
 	AdvancedSenderMultiplierFlag                   = "advanced-sender-multiplier"
 	AdvancedCSPExtraURIsFlag                       = "advanced-csp-extra-uris"
@@ -327,6 +336,15 @@ func (cfg *Configuration) RegisterFlags(flags *pflag.FlagSet) {
 	flags.Bool("syslog-enabled", cfg.SyslogEnabled, "Enable the syslog logging hook. Logs will be mirrored to the configured destination.")
 	flags.String("syslog-protocol", cfg.SyslogProtocol, "Protocol to use when directing logs to syslog. Leave empty to connect to local syslog.")
 	flags.String("syslog-address", cfg.SyslogAddress, "Address:port to send syslog logs to. Leave empty to connect to local syslog.")
+	flags.String("search-embedding-backend", cfg.SearchEmbeddingBackend, "Text embedding implementation to use. Can be 'api' or 'internal'. To disable embedding-based search, leave this empty.")
+	flags.String("search-embedding-api-base-url", cfg.SearchEmbeddingAPIBaseURL, "Base URL for OpenAI-compatible API used for generating text embeddings when search-embedding-backend is 'api'.")
+	flags.String("search-embedding-api-key", cfg.SearchEmbeddingAPIKey, "API key for OpenAI-compatible API used for generating text embeddings when search-embedding-backend is 'api'.")
+	flags.String("search-embedding-model", cfg.SearchEmbeddingModel, "Name of text embedding model to use for text searches.")
+	flags.Int("search-embedding-vector-size", cfg.SearchEmbeddingVectorSize, "Length of text embedding vectors.")
+	flags.String("search-embedding-distance-metric", cfg.SearchEmbeddingDistanceMetric, "Text embedding distance metric to use. Can be 'cosine', 'l1', or 'l2'.")
+	flags.String("search-embedding-prompt-document", cfg.SearchEmbeddingPromptDocument, "Prefix for input when generating an embedding for a document.")
+	flags.String("search-embedding-prompt-query", cfg.SearchEmbeddingPromptQuery, "Prefix for input when generating an embedding for a search query.")
+	flags.Int("search-embedding-max-chars", cfg.SearchEmbeddingMaxChars, "Max length of input to text embedding model, or zero for unlimited length.")
 	flags.String("advanced-cookies-samesite", cfg.Advanced.CookiesSamesite, "'strict' or 'lax', see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite")
 	flags.Int("advanced-sender-multiplier", cfg.Advanced.SenderMultiplier, "Multiplier to use per cpu for batching outgoing fedi messages. 0 or less turns batching off (not recommended).")
 	flags.StringSlice("advanced-csp-extra-uris", cfg.Advanced.CSPExtraURIs, "Additional URIs to allow when building content-security-policy for media + images.")
@@ -418,7 +436,7 @@ func (cfg *Configuration) RegisterFlags(flags *pflag.FlagSet) {
 }
 
 func (cfg *Configuration) MarshalMap() map[string]any {
-	cfgmap := make(map[string]any, 196)
+	cfgmap := make(map[string]any, 205)
 	cfgmap["log-level"] = cfg.LogLevel
 	cfgmap["log-format"] = cfg.LogFormat
 	cfgmap["log-timestamp-format"] = cfg.LogTimestampFormat
@@ -518,6 +536,15 @@ func (cfg *Configuration) MarshalMap() map[string]any {
 	cfgmap["syslog-enabled"] = cfg.SyslogEnabled
 	cfgmap["syslog-protocol"] = cfg.SyslogProtocol
 	cfgmap["syslog-address"] = cfg.SyslogAddress
+	cfgmap["search-embedding-backend"] = cfg.SearchEmbeddingBackend
+	cfgmap["search-embedding-api-base-url"] = cfg.SearchEmbeddingAPIBaseURL
+	cfgmap["search-embedding-api-key"] = cfg.SearchEmbeddingAPIKey
+	cfgmap["search-embedding-model"] = cfg.SearchEmbeddingModel
+	cfgmap["search-embedding-vector-size"] = cfg.SearchEmbeddingVectorSize
+	cfgmap["search-embedding-distance-metric"] = cfg.SearchEmbeddingDistanceMetric
+	cfgmap["search-embedding-prompt-document"] = cfg.SearchEmbeddingPromptDocument
+	cfgmap["search-embedding-prompt-query"] = cfg.SearchEmbeddingPromptQuery
+	cfgmap["search-embedding-max-chars"] = cfg.SearchEmbeddingMaxChars
 	cfgmap["advanced-cookies-samesite"] = cfg.Advanced.CookiesSamesite
 	cfgmap["advanced-sender-multiplier"] = cfg.Advanced.SenderMultiplier
 	cfgmap["advanced-csp-extra-uris"] = cfg.Advanced.CSPExtraURIs
@@ -1424,6 +1451,78 @@ func (cfg *Configuration) UnmarshalMap(cfgmap map[string]any) error {
 		}
 	}
 
+	if ival, ok := cfgmap["search-embedding-backend"]; ok {
+		var err error
+		cfg.SearchEmbeddingBackend, err = cast.ToStringE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> string for 'search-embedding-backend': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-api-base-url"]; ok {
+		var err error
+		cfg.SearchEmbeddingAPIBaseURL, err = cast.ToStringE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> string for 'search-embedding-api-base-url': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-api-key"]; ok {
+		var err error
+		cfg.SearchEmbeddingAPIKey, err = cast.ToStringE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> string for 'search-embedding-api-key': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-model"]; ok {
+		var err error
+		cfg.SearchEmbeddingModel, err = cast.ToStringE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> string for 'search-embedding-model': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-vector-size"]; ok {
+		var err error
+		cfg.SearchEmbeddingVectorSize, err = cast.ToIntE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> int for 'search-embedding-vector-size': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-distance-metric"]; ok {
+		var err error
+		cfg.SearchEmbeddingDistanceMetric, err = cast.ToStringE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> string for 'search-embedding-distance-metric': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-prompt-document"]; ok {
+		var err error
+		cfg.SearchEmbeddingPromptDocument, err = cast.ToStringE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> string for 'search-embedding-prompt-document': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-prompt-query"]; ok {
+		var err error
+		cfg.SearchEmbeddingPromptQuery, err = cast.ToStringE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> string for 'search-embedding-prompt-query': %w", ival, err)
+		}
+	}
+
+	if ival, ok := cfgmap["search-embedding-max-chars"]; ok {
+		var err error
+		cfg.SearchEmbeddingMaxChars, err = cast.ToIntE(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> int for 'search-embedding-max-chars': %w", ival, err)
+		}
+	}
+
 	if ival, ok := cfgmap["advanced-cookies-samesite"]; ok {
 		var err error
 		cfg.Advanced.CookiesSamesite, err = cast.ToStringE(ival)
@@ -2234,7 +2333,7 @@ func (st *ConfigState) GetLogLevel() (v string) {
 	st.mutex.RLock()
 	v = st.config.LogLevel
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLogLevel safely sets the Configuration value for state's 'LogLevel' field
@@ -2256,7 +2355,7 @@ func (st *ConfigState) GetLogFormat() (v string) {
 	st.mutex.RLock()
 	v = st.config.LogFormat
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLogFormat safely sets the Configuration value for state's 'LogFormat' field
@@ -2278,7 +2377,7 @@ func (st *ConfigState) GetLogTimestampFormat() (v string) {
 	st.mutex.RLock()
 	v = st.config.LogTimestampFormat
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLogTimestampFormat safely sets the Configuration value for state's 'LogTimestampFormat' field
@@ -2300,7 +2399,7 @@ func (st *ConfigState) GetLogDbQueries() (v bool) {
 	st.mutex.RLock()
 	v = st.config.LogDbQueries
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLogDbQueries safely sets the Configuration value for state's 'LogDbQueries' field
@@ -2322,7 +2421,7 @@ func (st *ConfigState) GetLogClientIP() (v bool) {
 	st.mutex.RLock()
 	v = st.config.LogClientIP
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLogClientIP safely sets the Configuration value for state's 'LogClientIP' field
@@ -2344,7 +2443,7 @@ func (st *ConfigState) GetRequestIDHeader() (v string) {
 	st.mutex.RLock()
 	v = st.config.RequestIDHeader
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetRequestIDHeader safely sets the Configuration value for state's 'RequestIDHeader' field
@@ -2366,7 +2465,7 @@ func (st *ConfigState) GetConfigPath() (v string) {
 	st.mutex.RLock()
 	v = st.config.ConfigPath
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetConfigPath safely sets the Configuration value for state's 'ConfigPath' field
@@ -2388,7 +2487,7 @@ func (st *ConfigState) GetApplicationName() (v string) {
 	st.mutex.RLock()
 	v = st.config.ApplicationName
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetApplicationName safely sets the Configuration value for state's 'ApplicationName' field
@@ -2410,7 +2509,7 @@ func (st *ConfigState) GetLandingPageUser() (v string) {
 	st.mutex.RLock()
 	v = st.config.LandingPageUser
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLandingPageUser safely sets the Configuration value for state's 'LandingPageUser' field
@@ -2432,7 +2531,7 @@ func (st *ConfigState) GetHost() (v string) {
 	st.mutex.RLock()
 	v = st.config.Host
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetHost safely sets the Configuration value for state's 'Host' field
@@ -2454,7 +2553,7 @@ func (st *ConfigState) GetAccountDomain() (v string) {
 	st.mutex.RLock()
 	v = st.config.AccountDomain
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountDomain safely sets the Configuration value for state's 'AccountDomain' field
@@ -2476,7 +2575,7 @@ func (st *ConfigState) GetProtocol() (v string) {
 	st.mutex.RLock()
 	v = st.config.Protocol
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetProtocol safely sets the Configuration value for state's 'Protocol' field
@@ -2498,7 +2597,7 @@ func (st *ConfigState) GetBindAddress() (v string) {
 	st.mutex.RLock()
 	v = st.config.BindAddress
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetBindAddress safely sets the Configuration value for state's 'BindAddress' field
@@ -2520,7 +2619,7 @@ func (st *ConfigState) GetPort() (v int) {
 	st.mutex.RLock()
 	v = st.config.Port
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetPort safely sets the Configuration value for state's 'Port' field
@@ -2542,7 +2641,7 @@ func (st *ConfigState) GetTrustedProxies() (v []string) {
 	st.mutex.RLock()
 	v = st.config.TrustedProxies
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetTrustedProxies safely sets the Configuration value for state's 'TrustedProxies' field
@@ -2564,7 +2663,7 @@ func (st *ConfigState) GetSoftwareVersion() (v string) {
 	st.mutex.RLock()
 	v = st.config.SoftwareVersion
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSoftwareVersion safely sets the Configuration value for state's 'SoftwareVersion' field
@@ -2586,7 +2685,7 @@ func (st *ConfigState) GetDbType() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbType
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbType safely sets the Configuration value for state's 'DbType' field
@@ -2608,7 +2707,7 @@ func (st *ConfigState) GetDbAddress() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbAddress
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbAddress safely sets the Configuration value for state's 'DbAddress' field
@@ -2630,7 +2729,7 @@ func (st *ConfigState) GetDbPort() (v int) {
 	st.mutex.RLock()
 	v = st.config.DbPort
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbPort safely sets the Configuration value for state's 'DbPort' field
@@ -2652,7 +2751,7 @@ func (st *ConfigState) GetDbUser() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbUser
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbUser safely sets the Configuration value for state's 'DbUser' field
@@ -2674,7 +2773,7 @@ func (st *ConfigState) GetDbPassword() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbPassword
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbPassword safely sets the Configuration value for state's 'DbPassword' field
@@ -2696,7 +2795,7 @@ func (st *ConfigState) GetDbDatabase() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbDatabase
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbDatabase safely sets the Configuration value for state's 'DbDatabase' field
@@ -2718,7 +2817,7 @@ func (st *ConfigState) GetDbTLSMode() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbTLSMode
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbTLSMode safely sets the Configuration value for state's 'DbTLSMode' field
@@ -2740,7 +2839,7 @@ func (st *ConfigState) GetDbTLSCACert() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbTLSCACert
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbTLSCACert safely sets the Configuration value for state's 'DbTLSCACert' field
@@ -2762,7 +2861,7 @@ func (st *ConfigState) GetDbMaxOpenConnsMultiplier() (v int) {
 	st.mutex.RLock()
 	v = st.config.DbMaxOpenConnsMultiplier
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbMaxOpenConnsMultiplier safely sets the Configuration value for state's 'DbMaxOpenConnsMultiplier' field
@@ -2784,7 +2883,7 @@ func (st *ConfigState) GetDbSqliteJournalMode() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbSqliteJournalMode
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbSqliteJournalMode safely sets the Configuration value for state's 'DbSqliteJournalMode' field
@@ -2806,7 +2905,7 @@ func (st *ConfigState) GetDbSqliteSynchronous() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbSqliteSynchronous
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbSqliteSynchronous safely sets the Configuration value for state's 'DbSqliteSynchronous' field
@@ -2828,7 +2927,7 @@ func (st *ConfigState) GetDbSqliteCacheSize() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.DbSqliteCacheSize
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbSqliteCacheSize safely sets the Configuration value for state's 'DbSqliteCacheSize' field
@@ -2850,7 +2949,7 @@ func (st *ConfigState) GetDbSqliteBusyTimeout() (v time.Duration) {
 	st.mutex.RLock()
 	v = st.config.DbSqliteBusyTimeout
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbSqliteBusyTimeout safely sets the Configuration value for state's 'DbSqliteBusyTimeout' field
@@ -2872,7 +2971,7 @@ func (st *ConfigState) GetDbPostgresConnectionString() (v string) {
 	st.mutex.RLock()
 	v = st.config.DbPostgresConnectionString
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetDbPostgresConnectionString safely sets the Configuration value for state's 'DbPostgresConnectionString' field
@@ -2894,7 +2993,7 @@ func (st *ConfigState) GetWebTemplateBaseDir() (v string) {
 	st.mutex.RLock()
 	v = st.config.WebTemplateBaseDir
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetWebTemplateBaseDir safely sets the Configuration value for state's 'WebTemplateBaseDir' field
@@ -2916,7 +3015,7 @@ func (st *ConfigState) GetWebAssetBaseDir() (v string) {
 	st.mutex.RLock()
 	v = st.config.WebAssetBaseDir
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetWebAssetBaseDir safely sets the Configuration value for state's 'WebAssetBaseDir' field
@@ -2938,7 +3037,7 @@ func (st *ConfigState) GetInstanceFederationMode() (v string) {
 	st.mutex.RLock()
 	v = st.config.InstanceFederationMode
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceFederationMode safely sets the Configuration value for state's 'InstanceFederationMode' field
@@ -2960,7 +3059,7 @@ func (st *ConfigState) GetInstanceFederationSpamFilter() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceFederationSpamFilter
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceFederationSpamFilter safely sets the Configuration value for state's 'InstanceFederationSpamFilter' field
@@ -2982,7 +3081,7 @@ func (st *ConfigState) GetInstanceExposePeers() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceExposePeers
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceExposePeers safely sets the Configuration value for state's 'InstanceExposePeers' field
@@ -3004,7 +3103,7 @@ func (st *ConfigState) GetInstanceExposeBlocklist() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceExposeBlocklist
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceExposeBlocklist safely sets the Configuration value for state's 'InstanceExposeBlocklist' field
@@ -3026,7 +3125,7 @@ func (st *ConfigState) GetInstanceExposeBlocklistWeb() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceExposeBlocklistWeb
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceExposeBlocklistWeb safely sets the Configuration value for state's 'InstanceExposeBlocklistWeb' field
@@ -3048,7 +3147,7 @@ func (st *ConfigState) GetInstanceExposeAllowlist() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceExposeAllowlist
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceExposeAllowlist safely sets the Configuration value for state's 'InstanceExposeAllowlist' field
@@ -3070,7 +3169,7 @@ func (st *ConfigState) GetInstanceExposeAllowlistWeb() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceExposeAllowlistWeb
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceExposeAllowlistWeb safely sets the Configuration value for state's 'InstanceExposeAllowlistWeb' field
@@ -3092,7 +3191,7 @@ func (st *ConfigState) GetInstanceExposePublicTimeline() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceExposePublicTimeline
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceExposePublicTimeline safely sets the Configuration value for state's 'InstanceExposePublicTimeline' field
@@ -3114,7 +3213,7 @@ func (st *ConfigState) GetInstanceExposeCustomEmojis() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceExposeCustomEmojis
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceExposeCustomEmojis safely sets the Configuration value for state's 'InstanceExposeCustomEmojis' field
@@ -3136,7 +3235,7 @@ func (st *ConfigState) GetInstanceDeliverToSharedInboxes() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceDeliverToSharedInboxes
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceDeliverToSharedInboxes safely sets the Configuration value for state's 'InstanceDeliverToSharedInboxes' field
@@ -3158,7 +3257,7 @@ func (st *ConfigState) GetInstanceInjectMastodonVersion() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceInjectMastodonVersion
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceInjectMastodonVersion safely sets the Configuration value for state's 'InstanceInjectMastodonVersion' field
@@ -3180,7 +3279,7 @@ func (st *ConfigState) GetInstanceLanguages() (v language.Languages) {
 	st.mutex.RLock()
 	v = st.config.InstanceLanguages
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceLanguages safely sets the Configuration value for state's 'InstanceLanguages' field
@@ -3202,7 +3301,7 @@ func (st *ConfigState) GetInstanceSubscriptionsProcessFrom() (v string) {
 	st.mutex.RLock()
 	v = st.config.InstanceSubscriptionsProcessFrom
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceSubscriptionsProcessFrom safely sets the Configuration value for state's 'InstanceSubscriptionsProcessFrom' field
@@ -3226,7 +3325,7 @@ func (st *ConfigState) GetInstanceSubscriptionsProcessEvery() (v time.Duration) 
 	st.mutex.RLock()
 	v = st.config.InstanceSubscriptionsProcessEvery
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceSubscriptionsProcessEvery safely sets the Configuration value for state's 'InstanceSubscriptionsProcessEvery' field
@@ -3252,7 +3351,7 @@ func (st *ConfigState) GetInstanceStatsMode() (v string) {
 	st.mutex.RLock()
 	v = st.config.InstanceStatsMode
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceStatsMode safely sets the Configuration value for state's 'InstanceStatsMode' field
@@ -3274,7 +3373,7 @@ func (st *ConfigState) GetInstanceAllowBackdatingStatuses() (v bool) {
 	st.mutex.RLock()
 	v = st.config.InstanceAllowBackdatingStatuses
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetInstanceAllowBackdatingStatuses safely sets the Configuration value for state's 'InstanceAllowBackdatingStatuses' field
@@ -3296,7 +3395,7 @@ func (st *ConfigState) GetAccountsRegistrationOpen() (v bool) {
 	st.mutex.RLock()
 	v = st.config.AccountsRegistrationOpen
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountsRegistrationOpen safely sets the Configuration value for state's 'AccountsRegistrationOpen' field
@@ -3318,7 +3417,7 @@ func (st *ConfigState) GetAccountsReasonRequired() (v bool) {
 	st.mutex.RLock()
 	v = st.config.AccountsReasonRequired
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountsReasonRequired safely sets the Configuration value for state's 'AccountsReasonRequired' field
@@ -3340,7 +3439,7 @@ func (st *ConfigState) GetAccountsRegistrationDailyLimit() (v int) {
 	st.mutex.RLock()
 	v = st.config.AccountsRegistrationDailyLimit
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountsRegistrationDailyLimit safely sets the Configuration value for state's 'AccountsRegistrationDailyLimit' field
@@ -3362,7 +3461,7 @@ func (st *ConfigState) GetAccountsRegistrationBacklogLimit() (v int) {
 	st.mutex.RLock()
 	v = st.config.AccountsRegistrationBacklogLimit
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountsRegistrationBacklogLimit safely sets the Configuration value for state's 'AccountsRegistrationBacklogLimit' field
@@ -3384,7 +3483,7 @@ func (st *ConfigState) GetAccountsAllowCustomCSS() (v bool) {
 	st.mutex.RLock()
 	v = st.config.AccountsAllowCustomCSS
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountsAllowCustomCSS safely sets the Configuration value for state's 'AccountsAllowCustomCSS' field
@@ -3406,7 +3505,7 @@ func (st *ConfigState) GetAccountsCustomCSSLength() (v int) {
 	st.mutex.RLock()
 	v = st.config.AccountsCustomCSSLength
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountsCustomCSSLength safely sets the Configuration value for state's 'AccountsCustomCSSLength' field
@@ -3428,7 +3527,7 @@ func (st *ConfigState) GetAccountsMaxProfileFields() (v int) {
 	st.mutex.RLock()
 	v = st.config.AccountsMaxProfileFields
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAccountsMaxProfileFields safely sets the Configuration value for state's 'AccountsMaxProfileFields' field
@@ -3450,7 +3549,7 @@ func (st *ConfigState) GetStorageBackend() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageBackend
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageBackend safely sets the Configuration value for state's 'StorageBackend' field
@@ -3472,7 +3571,7 @@ func (st *ConfigState) GetStorageLocalBasePath() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageLocalBasePath
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageLocalBasePath safely sets the Configuration value for state's 'StorageLocalBasePath' field
@@ -3494,7 +3593,7 @@ func (st *ConfigState) GetStorageS3Endpoint() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageS3Endpoint
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3Endpoint safely sets the Configuration value for state's 'StorageS3Endpoint' field
@@ -3516,7 +3615,7 @@ func (st *ConfigState) GetStorageS3AccessKey() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageS3AccessKey
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3AccessKey safely sets the Configuration value for state's 'StorageS3AccessKey' field
@@ -3538,7 +3637,7 @@ func (st *ConfigState) GetStorageS3SecretKey() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageS3SecretKey
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3SecretKey safely sets the Configuration value for state's 'StorageS3SecretKey' field
@@ -3560,7 +3659,7 @@ func (st *ConfigState) GetStorageS3UseSSL() (v bool) {
 	st.mutex.RLock()
 	v = st.config.StorageS3UseSSL
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3UseSSL safely sets the Configuration value for state's 'StorageS3UseSSL' field
@@ -3582,7 +3681,7 @@ func (st *ConfigState) GetStorageS3BucketName() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageS3BucketName
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3BucketName safely sets the Configuration value for state's 'StorageS3BucketName' field
@@ -3604,7 +3703,7 @@ func (st *ConfigState) GetStorageS3Proxy() (v bool) {
 	st.mutex.RLock()
 	v = st.config.StorageS3Proxy
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3Proxy safely sets the Configuration value for state's 'StorageS3Proxy' field
@@ -3626,7 +3725,7 @@ func (st *ConfigState) GetStorageS3RedirectURL() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageS3RedirectURL
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3RedirectURL safely sets the Configuration value for state's 'StorageS3RedirectURL' field
@@ -3648,7 +3747,7 @@ func (st *ConfigState) GetStorageS3BucketLookup() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageS3BucketLookup
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3BucketLookup safely sets the Configuration value for state's 'StorageS3BucketLookup' field
@@ -3670,7 +3769,7 @@ func (st *ConfigState) GetStorageS3KeyPrefix() (v string) {
 	st.mutex.RLock()
 	v = st.config.StorageS3KeyPrefix
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStorageS3KeyPrefix safely sets the Configuration value for state's 'StorageS3KeyPrefix' field
@@ -3692,7 +3791,7 @@ func (st *ConfigState) GetStatusesMaxChars() (v int) {
 	st.mutex.RLock()
 	v = st.config.StatusesMaxChars
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStatusesMaxChars safely sets the Configuration value for state's 'StatusesMaxChars' field
@@ -3714,7 +3813,7 @@ func (st *ConfigState) GetStatusesPollMaxOptions() (v int) {
 	st.mutex.RLock()
 	v = st.config.StatusesPollMaxOptions
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStatusesPollMaxOptions safely sets the Configuration value for state's 'StatusesPollMaxOptions' field
@@ -3736,7 +3835,7 @@ func (st *ConfigState) GetStatusesPollOptionMaxChars() (v int) {
 	st.mutex.RLock()
 	v = st.config.StatusesPollOptionMaxChars
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStatusesPollOptionMaxChars safely sets the Configuration value for state's 'StatusesPollOptionMaxChars' field
@@ -3758,7 +3857,7 @@ func (st *ConfigState) GetStatusesMediaMaxFiles() (v int) {
 	st.mutex.RLock()
 	v = st.config.StatusesMediaMaxFiles
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetStatusesMediaMaxFiles safely sets the Configuration value for state's 'StatusesMediaMaxFiles' field
@@ -3780,7 +3879,7 @@ func (st *ConfigState) GetScheduledStatusesMaxTotal() (v int) {
 	st.mutex.RLock()
 	v = st.config.ScheduledStatusesMaxTotal
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetScheduledStatusesMaxTotal safely sets the Configuration value for state's 'ScheduledStatusesMaxTotal' field
@@ -3802,7 +3901,7 @@ func (st *ConfigState) GetScheduledStatusesMaxDaily() (v int) {
 	st.mutex.RLock()
 	v = st.config.ScheduledStatusesMaxDaily
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetScheduledStatusesMaxDaily safely sets the Configuration value for state's 'ScheduledStatusesMaxDaily' field
@@ -3824,7 +3923,7 @@ func (st *ConfigState) GetLetsEncryptEnabled() (v bool) {
 	st.mutex.RLock()
 	v = st.config.LetsEncryptEnabled
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLetsEncryptEnabled safely sets the Configuration value for state's 'LetsEncryptEnabled' field
@@ -3846,7 +3945,7 @@ func (st *ConfigState) GetLetsEncryptPort() (v int) {
 	st.mutex.RLock()
 	v = st.config.LetsEncryptPort
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLetsEncryptPort safely sets the Configuration value for state's 'LetsEncryptPort' field
@@ -3868,7 +3967,7 @@ func (st *ConfigState) GetLetsEncryptCertDir() (v string) {
 	st.mutex.RLock()
 	v = st.config.LetsEncryptCertDir
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLetsEncryptCertDir safely sets the Configuration value for state's 'LetsEncryptCertDir' field
@@ -3890,7 +3989,7 @@ func (st *ConfigState) GetLetsEncryptEmailAddress() (v string) {
 	st.mutex.RLock()
 	v = st.config.LetsEncryptEmailAddress
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetLetsEncryptEmailAddress safely sets the Configuration value for state's 'LetsEncryptEmailAddress' field
@@ -3912,7 +4011,7 @@ func (st *ConfigState) GetTLSCertificateChain() (v string) {
 	st.mutex.RLock()
 	v = st.config.TLSCertificateChain
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetTLSCertificateChain safely sets the Configuration value for state's 'TLSCertificateChain' field
@@ -3934,7 +4033,7 @@ func (st *ConfigState) GetTLSCertificateKey() (v string) {
 	st.mutex.RLock()
 	v = st.config.TLSCertificateKey
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetTLSCertificateKey safely sets the Configuration value for state's 'TLSCertificateKey' field
@@ -3956,7 +4055,7 @@ func (st *ConfigState) GetOIDCEnabled() (v bool) {
 	st.mutex.RLock()
 	v = st.config.OIDCEnabled
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCEnabled safely sets the Configuration value for state's 'OIDCEnabled' field
@@ -3978,7 +4077,7 @@ func (st *ConfigState) GetOIDCIdpName() (v string) {
 	st.mutex.RLock()
 	v = st.config.OIDCIdpName
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCIdpName safely sets the Configuration value for state's 'OIDCIdpName' field
@@ -4000,7 +4099,7 @@ func (st *ConfigState) GetOIDCSkipVerification() (v bool) {
 	st.mutex.RLock()
 	v = st.config.OIDCSkipVerification
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCSkipVerification safely sets the Configuration value for state's 'OIDCSkipVerification' field
@@ -4022,7 +4121,7 @@ func (st *ConfigState) GetOIDCIssuer() (v string) {
 	st.mutex.RLock()
 	v = st.config.OIDCIssuer
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCIssuer safely sets the Configuration value for state's 'OIDCIssuer' field
@@ -4044,7 +4143,7 @@ func (st *ConfigState) GetOIDCClientID() (v string) {
 	st.mutex.RLock()
 	v = st.config.OIDCClientID
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCClientID safely sets the Configuration value for state's 'OIDCClientID' field
@@ -4066,7 +4165,7 @@ func (st *ConfigState) GetOIDCClientSecret() (v string) {
 	st.mutex.RLock()
 	v = st.config.OIDCClientSecret
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCClientSecret safely sets the Configuration value for state's 'OIDCClientSecret' field
@@ -4088,7 +4187,7 @@ func (st *ConfigState) GetOIDCScopes() (v []string) {
 	st.mutex.RLock()
 	v = st.config.OIDCScopes
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCScopes safely sets the Configuration value for state's 'OIDCScopes' field
@@ -4110,7 +4209,7 @@ func (st *ConfigState) GetOIDCLinkExisting() (v bool) {
 	st.mutex.RLock()
 	v = st.config.OIDCLinkExisting
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCLinkExisting safely sets the Configuration value for state's 'OIDCLinkExisting' field
@@ -4132,7 +4231,7 @@ func (st *ConfigState) GetOIDCAllowedGroups() (v []string) {
 	st.mutex.RLock()
 	v = st.config.OIDCAllowedGroups
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCAllowedGroups safely sets the Configuration value for state's 'OIDCAllowedGroups' field
@@ -4154,7 +4253,7 @@ func (st *ConfigState) GetOIDCAdminGroups() (v []string) {
 	st.mutex.RLock()
 	v = st.config.OIDCAdminGroups
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetOIDCAdminGroups safely sets the Configuration value for state's 'OIDCAdminGroups' field
@@ -4176,7 +4275,7 @@ func (st *ConfigState) GetTracingEnabled() (v bool) {
 	st.mutex.RLock()
 	v = st.config.TracingEnabled
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetTracingEnabled safely sets the Configuration value for state's 'TracingEnabled' field
@@ -4198,7 +4297,7 @@ func (st *ConfigState) GetMetricsEnabled() (v bool) {
 	st.mutex.RLock()
 	v = st.config.MetricsEnabled
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMetricsEnabled safely sets the Configuration value for state's 'MetricsEnabled' field
@@ -4220,7 +4319,7 @@ func (st *ConfigState) GetSMTPHost() (v string) {
 	st.mutex.RLock()
 	v = st.config.SMTPHost
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSMTPHost safely sets the Configuration value for state's 'SMTPHost' field
@@ -4242,7 +4341,7 @@ func (st *ConfigState) GetSMTPPort() (v int) {
 	st.mutex.RLock()
 	v = st.config.SMTPPort
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSMTPPort safely sets the Configuration value for state's 'SMTPPort' field
@@ -4264,7 +4363,7 @@ func (st *ConfigState) GetSMTPUsername() (v string) {
 	st.mutex.RLock()
 	v = st.config.SMTPUsername
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSMTPUsername safely sets the Configuration value for state's 'SMTPUsername' field
@@ -4286,7 +4385,7 @@ func (st *ConfigState) GetSMTPPassword() (v string) {
 	st.mutex.RLock()
 	v = st.config.SMTPPassword
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSMTPPassword safely sets the Configuration value for state's 'SMTPPassword' field
@@ -4308,7 +4407,7 @@ func (st *ConfigState) GetSMTPFrom() (v string) {
 	st.mutex.RLock()
 	v = st.config.SMTPFrom
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSMTPFrom safely sets the Configuration value for state's 'SMTPFrom' field
@@ -4330,7 +4429,7 @@ func (st *ConfigState) GetSMTPDiscloseRecipients() (v bool) {
 	st.mutex.RLock()
 	v = st.config.SMTPDiscloseRecipients
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSMTPDiscloseRecipients safely sets the Configuration value for state's 'SMTPDiscloseRecipients' field
@@ -4352,7 +4451,7 @@ func (st *ConfigState) GetSyslogEnabled() (v bool) {
 	st.mutex.RLock()
 	v = st.config.SyslogEnabled
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSyslogEnabled safely sets the Configuration value for state's 'SyslogEnabled' field
@@ -4374,7 +4473,7 @@ func (st *ConfigState) GetSyslogProtocol() (v string) {
 	st.mutex.RLock()
 	v = st.config.SyslogProtocol
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSyslogProtocol safely sets the Configuration value for state's 'SyslogProtocol' field
@@ -4396,7 +4495,7 @@ func (st *ConfigState) GetSyslogAddress() (v string) {
 	st.mutex.RLock()
 	v = st.config.SyslogAddress
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetSyslogAddress safely sets the Configuration value for state's 'SyslogAddress' field
@@ -4413,12 +4512,210 @@ func GetSyslogAddress() string { return global.GetSyslogAddress() }
 // SetSyslogAddress safely sets the value for global configuration 'SyslogAddress' field
 func SetSyslogAddress(v string) { global.SetSyslogAddress(v) }
 
+// GetSearchEmbeddingBackend safely fetches the Configuration value for state's 'SearchEmbeddingBackend' field
+func (st *ConfigState) GetSearchEmbeddingBackend() (v string) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingBackend
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingBackend safely sets the Configuration value for state's 'SearchEmbeddingBackend' field
+func (st *ConfigState) SetSearchEmbeddingBackend(v string) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingBackend = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingBackend safely fetches the value for global configuration 'SearchEmbeddingBackend' field
+func GetSearchEmbeddingBackend() string { return global.GetSearchEmbeddingBackend() }
+
+// SetSearchEmbeddingBackend safely sets the value for global configuration 'SearchEmbeddingBackend' field
+func SetSearchEmbeddingBackend(v string) { global.SetSearchEmbeddingBackend(v) }
+
+// GetSearchEmbeddingAPIBaseURL safely fetches the Configuration value for state's 'SearchEmbeddingAPIBaseURL' field
+func (st *ConfigState) GetSearchEmbeddingAPIBaseURL() (v string) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingAPIBaseURL
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingAPIBaseURL safely sets the Configuration value for state's 'SearchEmbeddingAPIBaseURL' field
+func (st *ConfigState) SetSearchEmbeddingAPIBaseURL(v string) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingAPIBaseURL = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingAPIBaseURL safely fetches the value for global configuration 'SearchEmbeddingAPIBaseURL' field
+func GetSearchEmbeddingAPIBaseURL() string { return global.GetSearchEmbeddingAPIBaseURL() }
+
+// SetSearchEmbeddingAPIBaseURL safely sets the value for global configuration 'SearchEmbeddingAPIBaseURL' field
+func SetSearchEmbeddingAPIBaseURL(v string) { global.SetSearchEmbeddingAPIBaseURL(v) }
+
+// GetSearchEmbeddingAPIKey safely fetches the Configuration value for state's 'SearchEmbeddingAPIKey' field
+func (st *ConfigState) GetSearchEmbeddingAPIKey() (v string) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingAPIKey
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingAPIKey safely sets the Configuration value for state's 'SearchEmbeddingAPIKey' field
+func (st *ConfigState) SetSearchEmbeddingAPIKey(v string) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingAPIKey = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingAPIKey safely fetches the value for global configuration 'SearchEmbeddingAPIKey' field
+func GetSearchEmbeddingAPIKey() string { return global.GetSearchEmbeddingAPIKey() }
+
+// SetSearchEmbeddingAPIKey safely sets the value for global configuration 'SearchEmbeddingAPIKey' field
+func SetSearchEmbeddingAPIKey(v string) { global.SetSearchEmbeddingAPIKey(v) }
+
+// GetSearchEmbeddingModel safely fetches the Configuration value for state's 'SearchEmbeddingModel' field
+func (st *ConfigState) GetSearchEmbeddingModel() (v string) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingModel
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingModel safely sets the Configuration value for state's 'SearchEmbeddingModel' field
+func (st *ConfigState) SetSearchEmbeddingModel(v string) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingModel = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingModel safely fetches the value for global configuration 'SearchEmbeddingModel' field
+func GetSearchEmbeddingModel() string { return global.GetSearchEmbeddingModel() }
+
+// SetSearchEmbeddingModel safely sets the value for global configuration 'SearchEmbeddingModel' field
+func SetSearchEmbeddingModel(v string) { global.SetSearchEmbeddingModel(v) }
+
+// GetSearchEmbeddingVectorSize safely fetches the Configuration value for state's 'SearchEmbeddingVectorSize' field
+func (st *ConfigState) GetSearchEmbeddingVectorSize() (v int) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingVectorSize
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingVectorSize safely sets the Configuration value for state's 'SearchEmbeddingVectorSize' field
+func (st *ConfigState) SetSearchEmbeddingVectorSize(v int) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingVectorSize = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingVectorSize safely fetches the value for global configuration 'SearchEmbeddingVectorSize' field
+func GetSearchEmbeddingVectorSize() int { return global.GetSearchEmbeddingVectorSize() }
+
+// SetSearchEmbeddingVectorSize safely sets the value for global configuration 'SearchEmbeddingVectorSize' field
+func SetSearchEmbeddingVectorSize(v int) { global.SetSearchEmbeddingVectorSize(v) }
+
+// GetSearchEmbeddingDistanceMetric safely fetches the Configuration value for state's 'SearchEmbeddingDistanceMetric' field
+func (st *ConfigState) GetSearchEmbeddingDistanceMetric() (v string) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingDistanceMetric
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingDistanceMetric safely sets the Configuration value for state's 'SearchEmbeddingDistanceMetric' field
+func (st *ConfigState) SetSearchEmbeddingDistanceMetric(v string) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingDistanceMetric = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingDistanceMetric safely fetches the value for global configuration 'SearchEmbeddingDistanceMetric' field
+func GetSearchEmbeddingDistanceMetric() string { return global.GetSearchEmbeddingDistanceMetric() }
+
+// SetSearchEmbeddingDistanceMetric safely sets the value for global configuration 'SearchEmbeddingDistanceMetric' field
+func SetSearchEmbeddingDistanceMetric(v string) { global.SetSearchEmbeddingDistanceMetric(v) }
+
+// GetSearchEmbeddingPromptDocument safely fetches the Configuration value for state's 'SearchEmbeddingPromptDocument' field
+func (st *ConfigState) GetSearchEmbeddingPromptDocument() (v string) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingPromptDocument
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingPromptDocument safely sets the Configuration value for state's 'SearchEmbeddingPromptDocument' field
+func (st *ConfigState) SetSearchEmbeddingPromptDocument(v string) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingPromptDocument = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingPromptDocument safely fetches the value for global configuration 'SearchEmbeddingPromptDocument' field
+func GetSearchEmbeddingPromptDocument() string { return global.GetSearchEmbeddingPromptDocument() }
+
+// SetSearchEmbeddingPromptDocument safely sets the value for global configuration 'SearchEmbeddingPromptDocument' field
+func SetSearchEmbeddingPromptDocument(v string) { global.SetSearchEmbeddingPromptDocument(v) }
+
+// GetSearchEmbeddingPromptQuery safely fetches the Configuration value for state's 'SearchEmbeddingPromptQuery' field
+func (st *ConfigState) GetSearchEmbeddingPromptQuery() (v string) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingPromptQuery
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingPromptQuery safely sets the Configuration value for state's 'SearchEmbeddingPromptQuery' field
+func (st *ConfigState) SetSearchEmbeddingPromptQuery(v string) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingPromptQuery = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingPromptQuery safely fetches the value for global configuration 'SearchEmbeddingPromptQuery' field
+func GetSearchEmbeddingPromptQuery() string { return global.GetSearchEmbeddingPromptQuery() }
+
+// SetSearchEmbeddingPromptQuery safely sets the value for global configuration 'SearchEmbeddingPromptQuery' field
+func SetSearchEmbeddingPromptQuery(v string) { global.SetSearchEmbeddingPromptQuery(v) }
+
+// GetSearchEmbeddingMaxChars safely fetches the Configuration value for state's 'SearchEmbeddingMaxChars' field
+func (st *ConfigState) GetSearchEmbeddingMaxChars() (v int) {
+	st.mutex.RLock()
+	v = st.config.SearchEmbeddingMaxChars
+	st.mutex.RUnlock()
+	return
+}
+
+// SetSearchEmbeddingMaxChars safely sets the Configuration value for state's 'SearchEmbeddingMaxChars' field
+func (st *ConfigState) SetSearchEmbeddingMaxChars(v int) {
+	st.mutex.Lock()
+	defer st.mutex.Unlock()
+	st.config.SearchEmbeddingMaxChars = v
+	st.reloadToViper()
+}
+
+// GetSearchEmbeddingMaxChars safely fetches the value for global configuration 'SearchEmbeddingMaxChars' field
+func GetSearchEmbeddingMaxChars() int { return global.GetSearchEmbeddingMaxChars() }
+
+// SetSearchEmbeddingMaxChars safely sets the value for global configuration 'SearchEmbeddingMaxChars' field
+func SetSearchEmbeddingMaxChars(v int) { global.SetSearchEmbeddingMaxChars(v) }
+
 // GetAdvancedCookiesSamesite safely fetches the Configuration value for state's 'Advanced.CookiesSamesite' field
 func (st *ConfigState) GetAdvancedCookiesSamesite() (v string) {
 	st.mutex.RLock()
 	v = st.config.Advanced.CookiesSamesite
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedCookiesSamesite safely sets the Configuration value for state's 'Advanced.CookiesSamesite' field
@@ -4440,7 +4737,7 @@ func (st *ConfigState) GetAdvancedSenderMultiplier() (v int) {
 	st.mutex.RLock()
 	v = st.config.Advanced.SenderMultiplier
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedSenderMultiplier safely sets the Configuration value for state's 'Advanced.SenderMultiplier' field
@@ -4462,7 +4759,7 @@ func (st *ConfigState) GetAdvancedCSPExtraURIs() (v []string) {
 	st.mutex.RLock()
 	v = st.config.Advanced.CSPExtraURIs
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedCSPExtraURIs safely sets the Configuration value for state's 'Advanced.CSPExtraURIs' field
@@ -4484,7 +4781,7 @@ func (st *ConfigState) GetAdvancedHeaderFilterMode() (v string) {
 	st.mutex.RLock()
 	v = st.config.Advanced.HeaderFilterMode
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedHeaderFilterMode safely sets the Configuration value for state's 'Advanced.HeaderFilterMode' field
@@ -4506,7 +4803,7 @@ func (st *ConfigState) GetAdvancedRateLimitRequests() (v int) {
 	st.mutex.RLock()
 	v = st.config.Advanced.RateLimit.Requests
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedRateLimitRequests safely sets the Configuration value for state's 'Advanced.RateLimit.Requests' field
@@ -4528,7 +4825,7 @@ func (st *ConfigState) GetAdvancedRateLimitExceptions() (v IPPrefixes) {
 	st.mutex.RLock()
 	v = st.config.Advanced.RateLimit.Exceptions
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedRateLimitExceptions safely sets the Configuration value for state's 'Advanced.RateLimit.Exceptions' field
@@ -4550,7 +4847,7 @@ func (st *ConfigState) GetAdvancedThrottlingMultiplier() (v int) {
 	st.mutex.RLock()
 	v = st.config.Advanced.Throttling.Multiplier
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedThrottlingMultiplier safely sets the Configuration value for state's 'Advanced.Throttling.Multiplier' field
@@ -4572,7 +4869,7 @@ func (st *ConfigState) GetAdvancedThrottlingRetryAfter() (v time.Duration) {
 	st.mutex.RLock()
 	v = st.config.Advanced.Throttling.RetryAfter
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdvancedThrottlingRetryAfter safely sets the Configuration value for state's 'Advanced.Throttling.RetryAfter' field
@@ -4594,7 +4891,7 @@ func (st *ConfigState) GetHTTPClientAllowIPs() (v []string) {
 	st.mutex.RLock()
 	v = st.config.HTTPClient.AllowIPs
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetHTTPClientAllowIPs safely sets the Configuration value for state's 'HTTPClient.AllowIPs' field
@@ -4616,7 +4913,7 @@ func (st *ConfigState) GetHTTPClientBlockIPs() (v []string) {
 	st.mutex.RLock()
 	v = st.config.HTTPClient.BlockIPs
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetHTTPClientBlockIPs safely sets the Configuration value for state's 'HTTPClient.BlockIPs' field
@@ -4638,7 +4935,7 @@ func (st *ConfigState) GetHTTPClientTimeout() (v time.Duration) {
 	st.mutex.RLock()
 	v = st.config.HTTPClient.Timeout
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetHTTPClientTimeout safely sets the Configuration value for state's 'HTTPClient.Timeout' field
@@ -4660,7 +4957,7 @@ func (st *ConfigState) GetHTTPClientTLSInsecureSkipVerify() (v bool) {
 	st.mutex.RLock()
 	v = st.config.HTTPClient.TLSInsecureSkipVerify
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetHTTPClientTLSInsecureSkipVerify safely sets the Configuration value for state's 'HTTPClient.TLSInsecureSkipVerify' field
@@ -4682,7 +4979,7 @@ func (st *ConfigState) GetHTTPClientInsecureOutgoing() (v bool) {
 	st.mutex.RLock()
 	v = st.config.HTTPClient.InsecureOutgoing
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetHTTPClientInsecureOutgoing safely sets the Configuration value for state's 'HTTPClient.InsecureOutgoing' field
@@ -4704,7 +5001,7 @@ func (st *ConfigState) GetMediaDescriptionMinChars() (v int) {
 	st.mutex.RLock()
 	v = st.config.Media.DescriptionMinChars
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaDescriptionMinChars safely sets the Configuration value for state's 'Media.DescriptionMinChars' field
@@ -4726,7 +5023,7 @@ func (st *ConfigState) GetMediaDescriptionMaxChars() (v int) {
 	st.mutex.RLock()
 	v = st.config.Media.DescriptionMaxChars
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaDescriptionMaxChars safely sets the Configuration value for state's 'Media.DescriptionMaxChars' field
@@ -4748,7 +5045,7 @@ func (st *ConfigState) GetMediaRemoteCacheDays() (v int) {
 	st.mutex.RLock()
 	v = st.config.Media.RemoteCacheDays
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaRemoteCacheDays safely sets the Configuration value for state's 'Media.RemoteCacheDays' field
@@ -4770,7 +5067,7 @@ func (st *ConfigState) GetMediaEmojiLocalMaxSize() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.Media.EmojiLocalMaxSize
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaEmojiLocalMaxSize safely sets the Configuration value for state's 'Media.EmojiLocalMaxSize' field
@@ -4792,7 +5089,7 @@ func (st *ConfigState) GetMediaEmojiRemoteMaxSize() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.Media.EmojiRemoteMaxSize
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaEmojiRemoteMaxSize safely sets the Configuration value for state's 'Media.EmojiRemoteMaxSize' field
@@ -4814,7 +5111,7 @@ func (st *ConfigState) GetMediaImageSizeHint() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.Media.ImageSizeHint
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaImageSizeHint safely sets the Configuration value for state's 'Media.ImageSizeHint' field
@@ -4836,7 +5133,7 @@ func (st *ConfigState) GetMediaVideoSizeHint() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.Media.VideoSizeHint
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaVideoSizeHint safely sets the Configuration value for state's 'Media.VideoSizeHint' field
@@ -4858,7 +5155,7 @@ func (st *ConfigState) GetMediaLocalMaxSize() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.Media.LocalMaxSize
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaLocalMaxSize safely sets the Configuration value for state's 'Media.LocalMaxSize' field
@@ -4880,7 +5177,7 @@ func (st *ConfigState) GetMediaRemoteMaxSize() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.Media.RemoteMaxSize
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaRemoteMaxSize safely sets the Configuration value for state's 'Media.RemoteMaxSize' field
@@ -4902,7 +5199,7 @@ func (st *ConfigState) GetMediaCleanupFrom() (v string) {
 	st.mutex.RLock()
 	v = st.config.Media.CleanupFrom
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaCleanupFrom safely sets the Configuration value for state's 'Media.CleanupFrom' field
@@ -4924,7 +5221,7 @@ func (st *ConfigState) GetMediaCleanupEvery() (v time.Duration) {
 	st.mutex.RLock()
 	v = st.config.Media.CleanupEvery
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaCleanupEvery safely sets the Configuration value for state's 'Media.CleanupEvery' field
@@ -4946,7 +5243,7 @@ func (st *ConfigState) GetMediaFfmpegPoolSize() (v int) {
 	st.mutex.RLock()
 	v = st.config.Media.FfmpegPoolSize
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaFfmpegPoolSize safely sets the Configuration value for state's 'Media.FfmpegPoolSize' field
@@ -4968,7 +5265,7 @@ func (st *ConfigState) GetMediaThumbMaxPixels() (v int) {
 	st.mutex.RLock()
 	v = st.config.Media.ThumbMaxPixels
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetMediaThumbMaxPixels safely sets the Configuration value for state's 'Media.ThumbMaxPixels' field
@@ -4990,7 +5287,7 @@ func (st *ConfigState) GetCacheMemoryTarget() (v bytesize.Size) {
 	st.mutex.RLock()
 	v = st.config.Cache.MemoryTarget
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheMemoryTarget safely sets the Configuration value for state's 'Cache.MemoryTarget' field
@@ -5012,7 +5309,7 @@ func (st *ConfigState) GetCacheAccountMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.AccountMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheAccountMemRatio safely sets the Configuration value for state's 'Cache.AccountMemRatio' field
@@ -5034,7 +5331,7 @@ func (st *ConfigState) GetCacheAccountNoteMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.AccountNoteMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheAccountNoteMemRatio safely sets the Configuration value for state's 'Cache.AccountNoteMemRatio' field
@@ -5056,7 +5353,7 @@ func (st *ConfigState) GetCacheAccountSettingsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.AccountSettingsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheAccountSettingsMemRatio safely sets the Configuration value for state's 'Cache.AccountSettingsMemRatio' field
@@ -5078,7 +5375,7 @@ func (st *ConfigState) GetCacheAccountStatsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.AccountStatsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheAccountStatsMemRatio safely sets the Configuration value for state's 'Cache.AccountStatsMemRatio' field
@@ -5100,7 +5397,7 @@ func (st *ConfigState) GetCacheApplicationMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ApplicationMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheApplicationMemRatio safely sets the Configuration value for state's 'Cache.ApplicationMemRatio' field
@@ -5122,7 +5419,7 @@ func (st *ConfigState) GetCacheBlockMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.BlockMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheBlockMemRatio safely sets the Configuration value for state's 'Cache.BlockMemRatio' field
@@ -5144,7 +5441,7 @@ func (st *ConfigState) GetCacheBlockIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.BlockIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheBlockIDsMemRatio safely sets the Configuration value for state's 'Cache.BlockIDsMemRatio' field
@@ -5166,7 +5463,7 @@ func (st *ConfigState) GetCacheBoostOfIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.BoostOfIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheBoostOfIDsMemRatio safely sets the Configuration value for state's 'Cache.BoostOfIDsMemRatio' field
@@ -5188,7 +5485,7 @@ func (st *ConfigState) GetCacheClientMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ClientMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheClientMemRatio safely sets the Configuration value for state's 'Cache.ClientMemRatio' field
@@ -5210,7 +5507,7 @@ func (st *ConfigState) GetCacheConversationMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ConversationMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheConversationMemRatio safely sets the Configuration value for state's 'Cache.ConversationMemRatio' field
@@ -5232,7 +5529,7 @@ func (st *ConfigState) GetCacheConversationLastStatusIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ConversationLastStatusIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheConversationLastStatusIDsMemRatio safely sets the Configuration value for state's 'Cache.ConversationLastStatusIDsMemRatio' field
@@ -5258,7 +5555,7 @@ func (st *ConfigState) GetCacheDomainPermissionDraftMemRation() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.DomainPermissionDraftMemRation
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheDomainPermissionDraftMemRation safely sets the Configuration value for state's 'Cache.DomainPermissionDraftMemRation' field
@@ -5284,7 +5581,7 @@ func (st *ConfigState) GetCacheDomainPermissionSubscriptionMemRation() (v float6
 	st.mutex.RLock()
 	v = st.config.Cache.DomainPermissionSubscriptionMemRation
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheDomainPermissionSubscriptionMemRation safely sets the Configuration value for state's 'Cache.DomainPermissionSubscriptionMemRation' field
@@ -5310,7 +5607,7 @@ func (st *ConfigState) GetCacheEmojiMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.EmojiMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheEmojiMemRatio safely sets the Configuration value for state's 'Cache.EmojiMemRatio' field
@@ -5332,7 +5629,7 @@ func (st *ConfigState) GetCacheEmojiCategoryMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.EmojiCategoryMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheEmojiCategoryMemRatio safely sets the Configuration value for state's 'Cache.EmojiCategoryMemRatio' field
@@ -5354,7 +5651,7 @@ func (st *ConfigState) GetCacheFilterMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FilterMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFilterMemRatio safely sets the Configuration value for state's 'Cache.FilterMemRatio' field
@@ -5376,7 +5673,7 @@ func (st *ConfigState) GetCacheFilterIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FilterIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFilterIDsMemRatio safely sets the Configuration value for state's 'Cache.FilterIDsMemRatio' field
@@ -5398,7 +5695,7 @@ func (st *ConfigState) GetCacheFilterKeywordMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FilterKeywordMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFilterKeywordMemRatio safely sets the Configuration value for state's 'Cache.FilterKeywordMemRatio' field
@@ -5420,7 +5717,7 @@ func (st *ConfigState) GetCacheFilterStatusMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FilterStatusMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFilterStatusMemRatio safely sets the Configuration value for state's 'Cache.FilterStatusMemRatio' field
@@ -5442,7 +5739,7 @@ func (st *ConfigState) GetCacheFollowMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FollowMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFollowMemRatio safely sets the Configuration value for state's 'Cache.FollowMemRatio' field
@@ -5464,7 +5761,7 @@ func (st *ConfigState) GetCacheFollowIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FollowIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFollowIDsMemRatio safely sets the Configuration value for state's 'Cache.FollowIDsMemRatio' field
@@ -5486,7 +5783,7 @@ func (st *ConfigState) GetCacheFollowRequestMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FollowRequestMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFollowRequestMemRatio safely sets the Configuration value for state's 'Cache.FollowRequestMemRatio' field
@@ -5508,7 +5805,7 @@ func (st *ConfigState) GetCacheFollowRequestIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FollowRequestIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFollowRequestIDsMemRatio safely sets the Configuration value for state's 'Cache.FollowRequestIDsMemRatio' field
@@ -5530,7 +5827,7 @@ func (st *ConfigState) GetCacheFollowingTagIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.FollowingTagIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheFollowingTagIDsMemRatio safely sets the Configuration value for state's 'Cache.FollowingTagIDsMemRatio' field
@@ -5552,7 +5849,7 @@ func (st *ConfigState) GetCacheHomeAccountIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.HomeAccountIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheHomeAccountIDsMemRatio safely sets the Configuration value for state's 'Cache.HomeAccountIDsMemRatio' field
@@ -5574,7 +5871,7 @@ func (st *ConfigState) GetCacheInReplyToIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.InReplyToIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheInReplyToIDsMemRatio safely sets the Configuration value for state's 'Cache.InReplyToIDsMemRatio' field
@@ -5596,7 +5893,7 @@ func (st *ConfigState) GetCacheInstanceMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.InstanceMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheInstanceMemRatio safely sets the Configuration value for state's 'Cache.InstanceMemRatio' field
@@ -5618,7 +5915,7 @@ func (st *ConfigState) GetCacheInteractionRequestMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.InteractionRequestMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheInteractionRequestMemRatio safely sets the Configuration value for state's 'Cache.InteractionRequestMemRatio' field
@@ -5640,7 +5937,7 @@ func (st *ConfigState) GetCacheListMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ListMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheListMemRatio safely sets the Configuration value for state's 'Cache.ListMemRatio' field
@@ -5662,7 +5959,7 @@ func (st *ConfigState) GetCacheListIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ListIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheListIDsMemRatio safely sets the Configuration value for state's 'Cache.ListIDsMemRatio' field
@@ -5684,7 +5981,7 @@ func (st *ConfigState) GetCacheListedIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ListedIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheListedIDsMemRatio safely sets the Configuration value for state's 'Cache.ListedIDsMemRatio' field
@@ -5706,7 +6003,7 @@ func (st *ConfigState) GetCacheMarkerMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.MarkerMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheMarkerMemRatio safely sets the Configuration value for state's 'Cache.MarkerMemRatio' field
@@ -5728,7 +6025,7 @@ func (st *ConfigState) GetCacheMediaMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.MediaMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheMediaMemRatio safely sets the Configuration value for state's 'Cache.MediaMemRatio' field
@@ -5750,7 +6047,7 @@ func (st *ConfigState) GetCacheMentionMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.MentionMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheMentionMemRatio safely sets the Configuration value for state's 'Cache.MentionMemRatio' field
@@ -5772,7 +6069,7 @@ func (st *ConfigState) GetCacheMoveMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.MoveMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheMoveMemRatio safely sets the Configuration value for state's 'Cache.MoveMemRatio' field
@@ -5794,7 +6091,7 @@ func (st *ConfigState) GetCacheNotificationMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.NotificationMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheNotificationMemRatio safely sets the Configuration value for state's 'Cache.NotificationMemRatio' field
@@ -5816,7 +6113,7 @@ func (st *ConfigState) GetCachePollMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.PollMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCachePollMemRatio safely sets the Configuration value for state's 'Cache.PollMemRatio' field
@@ -5838,7 +6135,7 @@ func (st *ConfigState) GetCachePollVoteMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.PollVoteMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCachePollVoteMemRatio safely sets the Configuration value for state's 'Cache.PollVoteMemRatio' field
@@ -5860,7 +6157,7 @@ func (st *ConfigState) GetCachePollVoteIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.PollVoteIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCachePollVoteIDsMemRatio safely sets the Configuration value for state's 'Cache.PollVoteIDsMemRatio' field
@@ -5882,7 +6179,7 @@ func (st *ConfigState) GetCacheReportMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ReportMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheReportMemRatio safely sets the Configuration value for state's 'Cache.ReportMemRatio' field
@@ -5904,7 +6201,7 @@ func (st *ConfigState) GetCacheScheduledStatusMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ScheduledStatusMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheScheduledStatusMemRatio safely sets the Configuration value for state's 'Cache.ScheduledStatusMemRatio' field
@@ -5926,7 +6223,7 @@ func (st *ConfigState) GetCacheSinBinStatusMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.SinBinStatusMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheSinBinStatusMemRatio safely sets the Configuration value for state's 'Cache.SinBinStatusMemRatio' field
@@ -5948,7 +6245,7 @@ func (st *ConfigState) GetCacheStatusMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.StatusMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheStatusMemRatio safely sets the Configuration value for state's 'Cache.StatusMemRatio' field
@@ -5970,7 +6267,7 @@ func (st *ConfigState) GetCacheStatusBookmarkMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.StatusBookmarkMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheStatusBookmarkMemRatio safely sets the Configuration value for state's 'Cache.StatusBookmarkMemRatio' field
@@ -5992,7 +6289,7 @@ func (st *ConfigState) GetCacheStatusBookmarkIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.StatusBookmarkIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheStatusBookmarkIDsMemRatio safely sets the Configuration value for state's 'Cache.StatusBookmarkIDsMemRatio' field
@@ -6014,7 +6311,7 @@ func (st *ConfigState) GetCacheStatusEditMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.StatusEditMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheStatusEditMemRatio safely sets the Configuration value for state's 'Cache.StatusEditMemRatio' field
@@ -6036,7 +6333,7 @@ func (st *ConfigState) GetCacheStatusFaveMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.StatusFaveMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheStatusFaveMemRatio safely sets the Configuration value for state's 'Cache.StatusFaveMemRatio' field
@@ -6058,7 +6355,7 @@ func (st *ConfigState) GetCacheStatusFaveIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.StatusFaveIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheStatusFaveIDsMemRatio safely sets the Configuration value for state's 'Cache.StatusFaveIDsMemRatio' field
@@ -6080,7 +6377,7 @@ func (st *ConfigState) GetCacheTagMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.TagMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheTagMemRatio safely sets the Configuration value for state's 'Cache.TagMemRatio' field
@@ -6102,7 +6399,7 @@ func (st *ConfigState) GetCacheThreadMuteMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.ThreadMuteMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheThreadMuteMemRatio safely sets the Configuration value for state's 'Cache.ThreadMuteMemRatio' field
@@ -6124,7 +6421,7 @@ func (st *ConfigState) GetCacheTokenMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.TokenMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheTokenMemRatio safely sets the Configuration value for state's 'Cache.TokenMemRatio' field
@@ -6146,7 +6443,7 @@ func (st *ConfigState) GetCacheTombstoneMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.TombstoneMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheTombstoneMemRatio safely sets the Configuration value for state's 'Cache.TombstoneMemRatio' field
@@ -6168,7 +6465,7 @@ func (st *ConfigState) GetCacheUserMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.UserMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheUserMemRatio safely sets the Configuration value for state's 'Cache.UserMemRatio' field
@@ -6190,7 +6487,7 @@ func (st *ConfigState) GetCacheUserMuteMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.UserMuteMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheUserMuteMemRatio safely sets the Configuration value for state's 'Cache.UserMuteMemRatio' field
@@ -6212,7 +6509,7 @@ func (st *ConfigState) GetCacheUserMuteIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.UserMuteIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheUserMuteIDsMemRatio safely sets the Configuration value for state's 'Cache.UserMuteIDsMemRatio' field
@@ -6234,7 +6531,7 @@ func (st *ConfigState) GetCacheWebfingerMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.WebfingerMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheWebfingerMemRatio safely sets the Configuration value for state's 'Cache.WebfingerMemRatio' field
@@ -6256,7 +6553,7 @@ func (st *ConfigState) GetCacheWebPushSubscriptionMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.WebPushSubscriptionMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheWebPushSubscriptionMemRatio safely sets the Configuration value for state's 'Cache.WebPushSubscriptionMemRatio' field
@@ -6280,7 +6577,7 @@ func (st *ConfigState) GetCacheWebPushSubscriptionIDsMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.WebPushSubscriptionIDsMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheWebPushSubscriptionIDsMemRatio safely sets the Configuration value for state's 'Cache.WebPushSubscriptionIDsMemRatio' field
@@ -6306,7 +6603,7 @@ func (st *ConfigState) GetCacheMutesMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.MutesMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheMutesMemRatio safely sets the Configuration value for state's 'Cache.MutesMemRatio' field
@@ -6328,7 +6625,7 @@ func (st *ConfigState) GetCacheStatusFilterMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.StatusFilterMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheStatusFilterMemRatio safely sets the Configuration value for state's 'Cache.StatusFilterMemRatio' field
@@ -6350,7 +6647,7 @@ func (st *ConfigState) GetCacheVisibilityMemRatio() (v float64) {
 	st.mutex.RLock()
 	v = st.config.Cache.VisibilityMemRatio
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetCacheVisibilityMemRatio safely sets the Configuration value for state's 'Cache.VisibilityMemRatio' field
@@ -6372,7 +6669,7 @@ func (st *ConfigState) GetAdminAccountUsername() (v string) {
 	st.mutex.RLock()
 	v = st.config.AdminAccountUsername
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdminAccountUsername safely sets the Configuration value for state's 'AdminAccountUsername' field
@@ -6394,7 +6691,7 @@ func (st *ConfigState) GetAdminAccountEmail() (v string) {
 	st.mutex.RLock()
 	v = st.config.AdminAccountEmail
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdminAccountEmail safely sets the Configuration value for state's 'AdminAccountEmail' field
@@ -6416,7 +6713,7 @@ func (st *ConfigState) GetAdminAccountPassword() (v string) {
 	st.mutex.RLock()
 	v = st.config.AdminAccountPassword
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdminAccountPassword safely sets the Configuration value for state's 'AdminAccountPassword' field
@@ -6438,7 +6735,7 @@ func (st *ConfigState) GetAdminTransPath() (v string) {
 	st.mutex.RLock()
 	v = st.config.AdminTransPath
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdminTransPath safely sets the Configuration value for state's 'AdminTransPath' field
@@ -6460,7 +6757,7 @@ func (st *ConfigState) GetAdminMediaPruneDryRun() (v bool) {
 	st.mutex.RLock()
 	v = st.config.AdminMediaPruneDryRun
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdminMediaPruneDryRun safely sets the Configuration value for state's 'AdminMediaPruneDryRun' field
@@ -6482,7 +6779,7 @@ func (st *ConfigState) GetAdminMediaListLocalOnly() (v bool) {
 	st.mutex.RLock()
 	v = st.config.AdminMediaListLocalOnly
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdminMediaListLocalOnly safely sets the Configuration value for state's 'AdminMediaListLocalOnly' field
@@ -6504,7 +6801,7 @@ func (st *ConfigState) GetAdminMediaListRemoteOnly() (v bool) {
 	st.mutex.RLock()
 	v = st.config.AdminMediaListRemoteOnly
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetAdminMediaListRemoteOnly safely sets the Configuration value for state's 'AdminMediaListRemoteOnly' field
@@ -6526,7 +6823,7 @@ func (st *ConfigState) GetTestrigSkipDBSetup() (v bool) {
 	st.mutex.RLock()
 	v = st.config.TestrigSkipDBSetup
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetTestrigSkipDBSetup safely sets the Configuration value for state's 'TestrigSkipDBSetup' field
@@ -6548,7 +6845,7 @@ func (st *ConfigState) GetTestrigSkipDBTeardown() (v bool) {
 	st.mutex.RLock()
 	v = st.config.TestrigSkipDBTeardown
 	st.mutex.RUnlock()
-	return v
+	return
 }
 
 // SetTestrigSkipDBTeardown safely sets the Configuration value for state's 'TestrigSkipDBTeardown' field
@@ -6630,7 +6927,7 @@ func (st *ConfigState) GetTotalOfMemRatios() (total float64) {
 	total += st.config.Cache.StatusFilterMemRatio
 	total += st.config.Cache.VisibilityMemRatio
 	st.mutex.RUnlock()
-	return total
+	return
 }
 
 // GetTotalOfMemRatios safely fetches the combined value for all the global state's mem ratio fields

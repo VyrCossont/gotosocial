@@ -187,7 +187,7 @@ func (f *Filter) getStatusFilterResults(
 
 	// Get the string fields status is
 	// filterable on for keyword matching.
-	fields := getFilterableFields(status)
+	fields := GetFilterableFields(status)
 
 	// Get all status filters owned by the requesting account.
 	filters, err := f.state.DB.GetFiltersByAccountID(ctx, requester.ID)

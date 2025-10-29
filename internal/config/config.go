@@ -166,6 +166,16 @@ type Configuration struct {
 	SyslogProtocol string `name:"syslog-protocol" usage:"Protocol to use when directing logs to syslog. Leave empty to connect to local syslog."`
 	SyslogAddress  string `name:"syslog-address" usage:"Address:port to send syslog logs to. Leave empty to connect to local syslog."`
 
+	SearchEmbeddingBackend        string `name:"search-embedding-backend" usage:"Text embedding implementation to use. Can be 'api' or 'internal'. To disable embedding-based search, leave this empty."`
+	SearchEmbeddingAPIBaseURL     string `name:"search-embedding-api-base-url" usage:"Base URL for OpenAI-compatible API used for generating text embeddings when search-embedding-backend is 'api'."`
+	SearchEmbeddingAPIKey         string `name:"search-embedding-api-key" usage:"API key for OpenAI-compatible API used for generating text embeddings when search-embedding-backend is 'api'."`
+	SearchEmbeddingModel          string `name:"search-embedding-model" usage:"Name of text embedding model to use for text searches."`
+	SearchEmbeddingVectorSize     int    `name:"search-embedding-vector-size" usage:"Length of text embedding vectors."`
+	SearchEmbeddingDistanceMetric string `name:"search-embedding-distance-metric" usage:"Text embedding distance metric to use. Can be 'cosine', 'l1', or 'l2'."`
+	SearchEmbeddingPromptDocument string `name:"search-embedding-prompt-document" usage:"Prefix for input when generating an embedding for a document."`
+	SearchEmbeddingPromptQuery    string `name:"search-embedding-prompt-query" usage:"Prefix for input when generating an embedding for a search query."`
+	SearchEmbeddingMaxChars       int    `name:"search-embedding-max-chars" usage:"Max length of input to text embedding model, or zero for unlimited length."`
+
 	// Advanced flags.
 	Advanced AdvancedConfig `name:"advanced"`
 

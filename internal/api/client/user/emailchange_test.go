@@ -25,6 +25,7 @@ import (
 
 	"code.superseriousbusiness.org/gotosocial/internal/api/client/user"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
@@ -45,7 +46,8 @@ func (suite *EmailChangeTestSuite) TestEmailChangePOST() {
 	sentEmails := make(map[string]string)
 	emailSender := testrig.NewEmailSender("../../../../web/template/", sentEmails)
 	webPushSender := testrig.NewNoopWebPushSender()
-	processor := testrig.NewTestProcessor(state, suite.federator, emailSender, webPushSender, suite.mediaManager)
+	embedder := searchembedding.NewNoopEmbedder()
+	processor := testrig.NewTestProcessor(state, suite.federator, emailSender, webPushSender, suite.mediaManager, embedder)
 	testrig.StartWorkers(state, processor.Workers())
 	userModule := user.New(processor)
 	testrig.StandardDBSetup(state.DB, suite.testAccounts)

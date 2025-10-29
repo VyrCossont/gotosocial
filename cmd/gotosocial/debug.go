@@ -19,6 +19,7 @@ package main
 
 import (
 	configaction "code.superseriousbusiness.org/gotosocial/cmd/gotosocial/action/debug/config"
+	queryaction "code.superseriousbusiness.org/gotosocial/cmd/gotosocial/action/debug/query"
 	"github.com/spf13/cobra"
 )
 
@@ -39,5 +40,18 @@ func debugCommands() *cobra.Command {
 		},
 	}
 	debugCmd.AddCommand(debugConfigCmd)
+
+	debugQueryCmd := &cobra.Command{
+		Use:   "query",
+		Short: "run one or more text embedding search queries passed as arguments after an -- separator",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return preRun(preRunArgs{cmd: cmd, skipValidation: true}) // don't do validation for debugging config
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return run(cmd.Context(), queryaction.Query)
+		},
+	}
+	debugCmd.AddCommand(debugQueryCmd)
+
 	return debugCmd
 }

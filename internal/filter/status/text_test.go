@@ -78,7 +78,7 @@ func TestFilterableText(t *testing.T) {
 			},
 		},
 	} {
-		fields := getFilterableFields(testcase.status)
+		fields := GetFilterableFields(testcase.status)
 		assert.Equal(t, testcase.expectedFields, fields)
 	}
 }

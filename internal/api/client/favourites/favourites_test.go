@@ -26,6 +26,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/media"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/storage"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
@@ -95,6 +96,7 @@ func (suite *FavouritesStandardTestSuite) SetupTest() {
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
+		searchembedding.NewNoopEmbedder(),
 	)
 	suite.favModule = favourites.New(suite.processor)
 }

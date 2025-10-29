@@ -33,6 +33,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/oauth"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/admin"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/storage"
 	"code.superseriousbusiness.org/gotosocial/internal/subscriptions"
@@ -118,6 +119,7 @@ func (suite *AdminStandardTestSuite) SetupTest() {
 		mutes.NewFilter(&suite.state),
 		interaction.NewFilter(&suite.state),
 		status.NewFilter(&suite.state),
+		searchembedding.NewNoopEmbedder(),
 	)
 
 	testrig.StartWorkers(&suite.state, suite.processor.Workers())

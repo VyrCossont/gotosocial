@@ -371,6 +371,11 @@ func (suite *FromClientAPITestSuite) TestProcessCreateStatusWithNotification() {
 
 	// Check for a Web Push status notification.
 	suite.checkWebPushed(testStructs.WebPushSender, receivingAccount.ID, gtsmodel.NotificationStatus)
+
+	// Check whether the embedder was called to index the status.
+	if suite.Len(testStructs.Embedder.Statuses, 1) {
+		suite.Equal(status.ID, testStructs.Embedder.Statuses[0].ID)
+	}
 }
 
 // Even with notifications on for a user, backfilling a status should not notify or timeline it.
@@ -2330,6 +2335,11 @@ func (suite *FromClientAPITestSuite) TestProcessUpdateStatusInteractedWith() {
 		string(notifJSON),
 		stream.EventTypeNotification,
 	)
+
+	// Check whether the embedder was called to index the updated status.
+	if suite.Len(testStructs.Embedder.Statuses, 1) {
+		suite.Equal(testStatus.ID, testStructs.Embedder.Statuses[0].ID)
+	}
 }
 
 func (suite *FromClientAPITestSuite) TestProcessStatusDelete() {
@@ -2392,6 +2402,12 @@ func (suite *FromClientAPITestSuite) TestProcessStatusDelete() {
 		return errors.Is(err, db.ErrNoEntries)
 	}) {
 		suite.FailNow("timed out waiting for status delete")
+	}
+
+	// Deleting the status's embedding should return a zero row count because we already deleted it.
+	rowCount, err := testStructs.State.DB.DeleteStatusEmbeddings(ctx, []string{deletedStatus.ID})
+	if suite.NoError(err) {
+		suite.Zero(rowCount)
 	}
 }
 

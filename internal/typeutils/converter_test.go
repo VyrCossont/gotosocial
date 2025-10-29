@@ -23,6 +23,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/testrig"
@@ -534,8 +535,9 @@ func (suite *TypeUtilsTestSuite) GetProcessor() *processing.Processor {
 	federator := testrig.NewTestFederator(&suite.state, transportController, mediaManager)
 	emailSender := testrig.NewEmailSender("../../web/template/", nil)
 	webPushSender := testrig.NewNoopWebPushSender()
+	embedder := searchembedding.NewNoopEmbedder()
 
-	processor := testrig.NewTestProcessor(&suite.state, federator, emailSender, webPushSender, mediaManager)
+	processor := testrig.NewTestProcessor(&suite.state, federator, emailSender, webPushSender, mediaManager, embedder)
 	testrig.StartWorkers(&suite.state, processor.Workers())
 
 	return processor

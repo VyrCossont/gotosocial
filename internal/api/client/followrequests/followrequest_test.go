@@ -32,6 +32,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/media"
 	"code.superseriousbusiness.org/gotosocial/internal/oauth"
 	"code.superseriousbusiness.org/gotosocial/internal/processing"
+	searchembedding "code.superseriousbusiness.org/gotosocial/internal/processing/search/embedding"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/storage"
 	"code.superseriousbusiness.org/gotosocial/testrig"
@@ -92,6 +93,7 @@ func (suite *FollowRequestStandardTestSuite) SetupTest() {
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
+		searchembedding.NewNoopEmbedder(),
 	)
 	suite.followRequestModule = followrequests.New(suite.processor)
 	testrig.StandardDBSetup(suite.db, nil)
